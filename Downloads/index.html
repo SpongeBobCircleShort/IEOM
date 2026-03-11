@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uday Jain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Syne:wght@400;600;700;800&family=Syne+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg3: #1a1a1a;
+    --border: rgba(255,255,255,0.07);
+    --text: #ddd;
+    --muted: #707070;
+    --muted2: #444;
+    --white: #f0f0f0;
+  }
+
+  /* ── GRAIN ── */
+  body::after {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9997;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.035; mix-blend-mode: overlay;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; overflow-x: hidden; cursor: none; }
+
+  /* ── CURSOR ── */
+  .cursor { position: fixed; width: 5px; height: 5px; background: var(--white); border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%,-50%); transition: transform 0.15s; }
+  .cursor-ring { position: fixed; width: 26px; height: 26px; border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; pointer-events: none; z-index: 9998; transform: translate(-50%,-50%); transition: width .3s ease, height .3s ease, border-color .3s ease; }
+  .cursor-ring.hovered { width: 44px; height: 44px; border-color: rgba(255,255,255,0.45); }
+
+  /* ── LOADER ── */
+  #loader {
+    position: fixed; inset: 0; background: var(--bg); z-index: 10000;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px;
+    animation: loaderFadeOut 0.6s ease 2s forwards;
+    pointer-events: none;
+  }
+  @keyframes loaderFadeOut { to { opacity: 0; visibility: hidden; } }
+
+  #loader-count {
+    font-family: 'Syne Mono', monospace; font-size: clamp(72px, 14vw, 140px);
+    color: var(--white); letter-spacing: -0.04em; line-height: 1;
+  }
+
+  #loader-bar-wrap { width: 200px; height: 1px; background: var(--border); overflow: hidden; }
+  #loader-bar {
+    height: 100%; width: 0%;
+    background: var(--white);
+    animation: barGrow 1.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+  @keyframes barGrow { to { width: 100%; } }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 48px;
+    opacity: 0; transition: opacity 0.6s ease;
+  }
+  nav.show { opacity: 1; }
+  .nav-name { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--white); text-decoration: none; }
+  .nav-links { display: flex; gap: 28px; list-style: none; }
+  .nav-links a { font-family: 'Syne Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: var(--white); text-decoration: none; text-transform: uppercase; opacity: 0.4; transition: opacity 0.2s; }
+  .nav-links a:hover { opacity: 1; }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh; display: flex; flex-direction: column;
+    justify-content: space-between; padding: 120px 48px 48px;
+    border-bottom: 1px solid var(--border); position: relative; overflow: hidden;
+  }
+
+  .hero-top { display: flex; justify-content: space-between; align-items: flex-start; }
+
+  .reveal-line { overflow: hidden; }
+  .reveal-line .inner {
+    display: block;
+    transform: translateY(105%);
+    transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-line.fired .inner { transform: translateY(0); }
+
+  .fade-up {
+    opacity: 0; transform: translateY(18px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .fade-up.fired { opacity: 1; transform: translateY(0); }
+
+  .hero-pill {
+    font-family: 'Syne Mono', monospace; font-size: 9px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--muted);
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 40px; padding: 6px 14px;
+  }
+
+  .hero-status {
+    font-family: 'Syne Mono', monospace; font-size: 9px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted); text-align: right;
+    display: flex; flex-direction: column; gap: 4px; align-items: flex-end;
+  }
+  .status-dot { display: inline-block; width: 6px; height: 6px; background: #3ecf8e; border-radius: 50%; margin-right: 6px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .hero-center { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 40px 0 20px; }
+
+  .hero-name-block { line-height: 0.85; margin-bottom: 32px; }
+  .hn {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(100px, 14vw, 200px);
+    font-weight: 300; display: block; color: var(--white);
+    letter-spacing: -0.025em;
+  }
+  .hn.dim { color: rgba(240,240,240,0.18); font-style: italic; }
+
+  .hero-tagline {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(16px, 1.8vw, 21px); font-style: italic; font-weight: 300;
+    color: var(--muted); max-width: 520px; line-height: 1.6;
+  }
+
+  .hero-bottom { display: flex; align-items: flex-end; justify-content: space-between; padding-top: 20px; }
+  .hero-location { font-family: 'Syne Mono', monospace; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted2); }
+  .hero-scroll { font-family: 'Syne Mono', monospace; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted2); display: flex; align-items: center; gap: 10px; }
+  .scroll-line { width: 0px; height: 1px; background: var(--muted2); transition: width 1.2s ease 1.6s; }
+  .scroll-line.grow { width: 40px; }
+
+  /* ── TICKER ── */
+  .ticker { overflow: hidden; border-bottom: 1px solid var(--border); padding: 12px 0; }
+  .ticker-track { display: flex; width: max-content; animation: scroll-left 28s linear infinite; }
+  .t-item { font-family: 'Syne Mono', monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted2); padding: 0 28px; white-space: nowrap; }
+  .t-dot { opacity: 0.4; }
+  @keyframes scroll-left { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+  /* ── MAIN ── */
+  .main { max-width: 1200px; margin: 0 auto; padding: 0 48px; }
+
+  /* ── SECTION ROW ── */
+  .s-row {
+    display: grid; grid-template-columns: 180px 1fr;
+    border-bottom: 1px solid var(--border);
+    padding: 72px 0; gap: 64px;
+  }
+  .s-row:last-child { border-bottom: none; }
+
+  .s-label {
+    font-family: 'Syne Mono', monospace; font-size: 9px;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted2);
+    padding-top: 6px; position: sticky; top: 80px; height: fit-content;
+  }
+  .s-label em { display: block; font-style: normal; color: var(--muted2); margin-bottom: 4px; }
+  .s-label strong { font-family: 'Syne Mono', monospace; font-weight: 400; color: var(--muted); font-size: 16px; }
+  .s-content { display: flex; flex-direction: column; gap: 0; }
+
+  /* ── PROJECT ── */
+  .proj {
+    display: grid; grid-template-columns: 1fr auto;
+    padding: 28px 0; border-bottom: 1px solid var(--border);
+    gap: 20px; align-items: start;
+    transition: opacity 0.3s ease;
+  }
+  .proj:last-child { border-bottom: none; padding-bottom: 0; }
+  .s-content:hover .proj { opacity: 0.35; }
+  .s-content:hover .proj:hover { opacity: 1; }
+
+  .proj-num-name { display: flex; align-items: baseline; gap: 14px; margin-bottom: 6px; }
+  .proj-num { font-family: 'Syne Mono', monospace; font-size: 9px; color: var(--muted2); letter-spacing: 0.1em; }
+  .proj-name {
+    font-family: 'Cormorant Garamond', serif; font-size: clamp(24px, 3vw, 36px);
+    font-weight: 300; color: var(--white); line-height: 1;
+    transition: letter-spacing 0.4s ease;
+  }
+  .proj:hover .proj-name { letter-spacing: 0.03em; }
+  .proj-stack { font-family: 'Syne Mono', monospace; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted2); margin-bottom: 14px; }
+  .proj-desc { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 300; line-height: 1.65; color: var(--muted); max-width: 580px; }
+
+  .proj-right { text-align: right; padding-top: 6px; }
+  .proj-tag {
+    display: inline-block; border: 1px solid var(--border); border-radius: 40px;
+    padding: 4px 12px; font-family: 'Syne Mono', monospace;
+    font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted2);
+    transition: border-color 0.3s, color 0.3s;
+  }
+  .proj:hover .proj-tag { border-color: rgba(255,255,255,0.2); color: var(--muted); }
+
+  /* ── EXP ── */
+  .exp { padding: 28px 0; border-bottom: 1px solid var(--border); }
+  .exp:last-child { border-bottom: none; padding-bottom: 0; }
+  .exp-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
+  .exp-org { font-family: 'Cormorant Garamond', serif; font-size: clamp(20px, 2.5vw, 28px); font-weight: 300; color: var(--white); transition: letter-spacing 0.4s ease; }
+  .exp:hover .exp-org { letter-spacing: 0.02em; }
+  .exp-date { font-family: 'Syne Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: var(--muted); }
+  .exp-role { font-family: 'Syne Mono', monospace; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted2); margin-bottom: 14px; }
+  .exp-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .exp-list li {
+    font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 300;
+    color: var(--muted); line-height: 1.55; padding-left: 18px; position: relative;
+    opacity: 0; transform: translateX(-8px);
+    transition: opacity 0.5s ease, transform 0.5s ease, color 0.2s;
+  }
+  .exp-list li.show { opacity: 1; transform: translateX(0); }
+  .exp-list li::before { content: '↳'; position: absolute; left: 0; color: var(--muted2); font-size: 12px; top: 2px; }
+
+  /* ── EDU ── */
+  .edu-name { font-family: 'Cormorant Garamond', serif; font-size: clamp(22px, 3vw, 32px); font-weight: 300; color: var(--white); margin-bottom: 4px; }
+  .edu-sub { font-family: 'Syne Mono', monospace; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted2); margin-bottom: 22px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill {
+    border: 1px solid var(--border); border-radius: 40px; padding: 5px 14px;
+    font-family: 'Syne Mono', monospace; font-size: 8px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted2);
+    opacity: 0; transform: scale(0.9);
+    transition: opacity 0.4s ease, transform 0.4s ease, border-color 0.2s, color 0.2s;
+  }
+  .pill.show { opacity: 1; transform: scale(1); }
+  .pill:hover { border-color: rgba(255,255,255,0.2); color: var(--muted); }
+
+  /* ── SKILLS ── */
+  .skills-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 32px 48px; }
+  .sk-label { font-family: 'Syne Mono', monospace; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted2); margin-bottom: 12px; }
+  .sk-items { display: flex; flex-direction: column; gap: 2px; }
+  .sk-items span {
+    font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 300;
+    color: var(--muted); line-height: 1.4;
+    opacity: 0; transform: translateY(10px);
+    transition: opacity 0.5s ease, transform 0.5s ease, color 0.2s;
+  }
+  .sk-items span.show { opacity: 1; transform: translateY(0); }
+  .sk-items span:hover { color: var(--white); }
+
+  /* ── FOOTER ── */
+  .footer {
+    border-top: 1px solid var(--border); padding: 80px 48px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    max-width: 100%;
+  }
+  .footer-cta-label { font-family: 'Syne Mono', monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted2); margin-bottom: 16px; }
+  .footer-cta {
+    font-family: 'Cormorant Garamond', serif; font-size: clamp(40px, 7vw, 90px);
+    font-weight: 300; font-style: italic; color: var(--white); line-height: 1;
+    transition: letter-spacing 0.5s ease;
+  }
+  .footer-cta:hover { letter-spacing: 0.04em; }
+  .footer-right { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+  .f-link { font-family: 'Syne Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color .2s, letter-spacing .3s; }
+  .f-link:hover { color: var(--white); letter-spacing: 0.15em; }
+  .footer-copy { font-family: 'Syne Mono', monospace; font-size: 9px; color: var(--muted2); margin-top: 12px; text-align: right; }
+
+  /* ── SCROLL INDICATOR LINE ── */
+  .page-progress { position: fixed; top: 0; left: 0; height: 1px; background: rgba(255,255,255,0.25); z-index: 200; width: 0%; transition: width 0.1s linear; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    nav { padding: 18px 24px; }
+    .hero { padding: 100px 24px 40px; }
+    .main { padding: 0 24px; }
+    .s-row { grid-template-columns: 1fr; gap: 20px; padding: 48px 0; }
+    .s-label { position: static; }
+    .skills-2col { grid-template-columns: 1fr; gap: 24px; }
+    .footer { flex-direction: column; gap: 48px; padding: 60px 24px; align-items: flex-start; }
+    .footer-right { align-items: flex-start; }
+    .footer-copy { text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-progress" id="progress"></div>
+
+<!-- LOADER -->
+<div id="loader">
+  <div id="loader-count">0%</div>
+  <div id="loader-bar-wrap"><div id="loader-bar"></div></div>
+</div>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav id="nav">
+  <a class="nav-name" href="#">Uday Jain</a>
+  <ul class="nav-links">
+    <li><a href="#projects">Work</a></li>
+    <li><a href="#experience">Experience</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-top">
+    <span class="hero-pill fade-up">( Mechanical Engineering )</span>
+    <div class="hero-status fade-up" style="transition-delay:0.1s">
+      <span><span class="status-dot"></span>Open to internships</span>
+      <span>Penn State Behrend · Est. 2025</span>
+    </div>
+  </div>
+
+  <div class="hero-center">
+    <div class="hero-name-block">
+      <div class="reveal-line"><span class="hn inner">Uday</span></div>
+      <div class="reveal-line" style="transition-delay:0.12s"><span class="hn dim inner">Jain</span></div>
+    </div>
+    <div class="reveal-line" style="transition-delay:0.28s">
+      <p class="hero-tagline inner">I build things that move — simulating vehicle dynamics, modeling powertrain systems, and automating the analysis in between. When I'm not in the lab, I'm pitching investment ideas to a real fund board.</p>
+    </div>
+  </div>
+
+  <div class="hero-bottom">
+    <span class="hero-location fade-up" style="transition-delay:0.5s">Erie, PA — USA</span>
+    <span class="hero-scroll fade-up" style="transition-delay:0.55s">
+      <span class="scroll-line" id="scrollLine"></span>Scroll &amp; explore
+    </span>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-track">
+    <span class="t-item">MATLAB</span><span class="t-item t-dot">·</span>
+    <span class="t-item">Simulink</span><span class="t-item t-dot">·</span>
+    <span class="t-item">Vehicle Dynamics</span><span class="t-item t-dot">·</span>
+    <span class="t-item">PID Control</span><span class="t-item t-dot">·</span>
+    <span class="t-item">Python</span><span class="t-item t-dot">·</span>
+    <span class="t-item">ABS Logic</span><span class="t-item t-dot">·</span>
+    <span class="t-item">Powertrain Modeling</span><span class="t-item t-dot">·</span>
+    <span class="t-item">AutoCAD</span><span class="t-item t-dot">·</span>
+    <span class="t-item">Bloomberg Terminal</span><span class="t-item t-dot">·</span>
+    <span class="t-item">Test &amp; Validation</span><span class="t-item t-dot">·</span>
+    <span class="t-item">Git</span><span class="t-item t-dot">·</span>
+    <span class="t-item">MATLAB</span><span class="t-item t-dot">·</span>
+    <span class="t-item">Simulink</span><span class="t-item t-dot">·</span>
+    <span class="t-item">Vehicle Dynamics</span><span class="t-item t-dot">·</span>
+    <span class="t-item">PID Control</span><span class="t-item t-dot">·</span>
+    <span class="t-item">Python</span><span class="t-item t-dot">·</span>
+    <span class="t-item">ABS Logic</span><span class="t-item t-dot">·</span>
+    <span class="t-item">Powertrain Modeling</span><span class="t-item t-dot">·</span>
+    <span class="t-item">AutoCAD</span><span class="t-item t-dot">·</span>
+    <span class="t-item">Bloomberg Terminal</span><span class="t-item t-dot">·</span>
+    <span class="t-item">Test &amp; Validation</span><span class="t-item t-dot">·</span>
+    <span class="t-item">Git</span><span class="t-item t-dot">·</span>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- PROJECTS -->
+  <div class="s-row" id="projects">
+    <div class="s-label">
+      <em>Selected</em>
+      <strong>Work</strong>
+    </div>
+    <div class="s-content">
+      <div class="proj">
+        <div>
+          <div class="proj-num-name"><span class="proj-num">01 —</span><span class="proj-name">Vehicle Dynamics Simulator</span></div>
+          <div class="proj-stack">MATLAB · Simulink · Python</div>
+          <p class="proj-desc">Physics-based simulator achieving 92% correlation across 4 test scenarios — acceleration, braking, hill-climb, wet-road. Implements ABS logic, PID cruise control, full drivetrain/powertrain modeling, and an automated Python post-processing pipeline.</p>
+        </div>
+        <div class="proj-right"><span class="proj-tag">Engineering</span></div>
+      </div>
+      <div class="proj">
+        <div>
+          <div class="proj-num-name"><span class="proj-num">02 —</span><span class="proj-name">Rocket Stability Simulations</span></div>
+          <div class="proj-stack">MATLAB · Penn State Rocketry Club</div>
+          <p class="proj-desc">MATLAB-based stability simulations and performance analyses for rocket design validation — methodology directly transferable to automotive vehicle systems engineering.</p>
+        </div>
+        <div class="proj-right"><span class="proj-tag">Simulation</span></div>
+      </div>
+      <div class="proj">
+        <div>
+          <div class="proj-num-name"><span class="proj-num">03 —</span><span class="proj-name">lowercase</span></div>
+          <div class="proj-stack">India Case Study Competition · Top 25% of 200 Teams</div>
+          <p class="proj-desc">Led a team of 5 to design a comprehensive airport navigation solution combining technical architecture and financial modeling, delivered within a 48-hour competition window. Semi-finalist.</p>
+        </div>
+        <div class="proj-right"><span class="proj-tag">Leadership</span></div>
+      </div>
+      <div class="proj">
+        <div>
+          <div class="proj-num-name"><span class="proj-num">04 —</span><span class="proj-name">Equity Research Pitch</span></div>
+          <div class="proj-stack">Bloomberg Terminal · YCharts · DCF Modeling</div>
+          <p class="proj-desc">Full-stack equity analysis presented to the Intrieri Fund board — covering industry thesis, competitive positioning, DCF and comparable company valuation, and a formal buy/sell/hold recommendation. Approved for inclusion in the $1.6M fund portfolio.</p>
+        </div>
+        <div class="proj-right"><span class="proj-tag">Finance</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPERIENCE -->
+  <div class="s-row" id="experience">
+    <div class="s-label">
+      <em>Where</em>
+      <strong>I've Been</strong>
+    </div>
+    <div class="s-content">
+      <div class="exp">
+        <div class="exp-header"><span class="exp-org">Intrieri Student-Managed Fund</span><span class="exp-date">Jan 2026 – Present</span></div>
+        <div class="exp-role">Assistant Analyst · Penn State Behrend</div>
+        <ul class="exp-list">
+          <li>Conduct equity research and build financial models for a $1.6M student-managed fund using Bloomberg Terminal and YCharts — covering valuation, sector analysis, and risk assessment</li>
+          <li>Deliver buy/sell/hold pitch presentations to the fund board, defending recommendations under real investment scrutiny</li>
+        </ul>
+      </div>
+      <div class="exp">
+        <div class="exp-header"><span class="exp-org">Penn State Rocketry Club</span><span class="exp-date">Fall 2025 – Present</span></div>
+        <div class="exp-role">Test &amp; Simulation Member</div>
+        <ul class="exp-list">
+          <li>Develop MATLAB stability simulations and performance analyses to validate rocket designs ahead of competition launches — methodology directly applicable to automotive vehicle dynamics</li>
+        </ul>
+      </div>
+      <div class="exp">
+        <div class="exp-header"><span class="exp-org">Bruno's Restaurant</span><span class="exp-date">Nov 2025 – Feb 2026</span></div>
+        <div class="exp-role">Line Cook</div>
+        <ul class="exp-list">
+          <li>Executed high-volume food preparation under pressure in a professional kitchen — building discipline, precision, and composure in fast-paced, exacting environments</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDUCATION -->
+  <div class="s-row">
+    <div class="s-label"><em>Where I'm</em><strong>Studying</strong></div>
+    <div class="s-content">
+      <div>
+        <div class="edu-name">Penn State Erie<br>The Behrend College</div>
+        <div class="edu-sub">B.S. Mechanical Engineering · Expected May 2029 · Erie, PA</div>
+        <div class="pills">
+          <span class="pill">Statics</span>
+          <span class="pill">Differential Equations</span>
+          <span class="pill">Calculus II &amp; III</span>
+          <span class="pill">Physics: Mechanics → E&amp;M</span>
+          <span class="pill">MATLAB</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SKILLS -->
+  <div class="s-row">
+    <div class="s-label"><em>What I</em><strong>Know</strong></div>
+    <div class="s-content">
+      <div class="skills-2col">
+        <div>
+          <div class="sk-label">Simulation</div>
+          <div class="sk-items"><span>MATLAB</span><span>Simulink</span><span>PID Control</span><span>Vehicle Dynamics</span></div>
+        </div>
+        <div>
+          <div class="sk-label">Programming</div>
+          <div class="sk-items"><span>Python</span><span>Git</span><span>Data Processing</span></div>
+        </div>
+        <div>
+          <div class="sk-label">Engineering</div>
+          <div class="sk-items"><span>Powertrain &amp; Drivetrain Modeling</span><span>Test Design &amp; Validation</span><span>Requirements Traceability</span></div>
+        </div>
+        <div>
+          <div class="sk-label">Tools</div>
+          <div class="sk-items"><span>AutoCAD</span><span>Bloomberg Terminal</span><span>Excel · YCharts</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer class="footer" id="contact">
+  <div>
+    <div class="footer-cta-label">( Get in touch )</div>
+    <div class="footer-cta">Let's talk.</div>
+  </div>
+  <div class="footer-right">
+    <a href="tel:+12534203941" class="f-link">+1 253-420-3941</a>
+    <a href="mailto:uaj5017@psu.edu" class="f-link">uaj5017@psu.edu</a>
+    <span class="f-link" style="pointer-events:none;cursor:none">Erie, PA — USA</span>
+    <div class="footer-copy">® 2026 Uday Jain</div>
+  </div>
+</footer>
+
+<script>
+// ── LOADER ──
+const countEl = document.getElementById('loader-count');
+const steps = [0,6,14,23,31,40,52,61,70,79,88,95,100];
+let si = 0;
+const stepMs = 1800 / steps.length;
+const countInterval = setInterval(() => {
+  if (si < steps.length) { countEl.textContent = steps[si] + '%'; si++; }
+  else clearInterval(countInterval);
+}, stepMs);
+
+setTimeout(initPage, 2600);
+
+function initPage() {
+  document.getElementById('loader').style.display = 'none';
+  document.getElementById('nav').classList.add('show');
+
+  document.querySelectorAll('.hero .reveal-line').forEach((el, i) => {
+    setTimeout(() => el.classList.add('fired'), i * 130);
+  });
+  document.querySelectorAll('.hero .fade-up').forEach((el, i) => {
+    setTimeout(() => el.classList.add('fired'), 200 + i * 100);
+  });
+  setTimeout(() => document.getElementById('scrollLine').classList.add('grow'), 1400);
+  initObserver();
+}
+
+// ── SCROLL OBSERVER ──
+function initObserver() {
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+
+      if (el.classList.contains('s-row')) {
+        el.querySelectorAll('.reveal-line').forEach((line, i) => {
+          setTimeout(() => line.classList.add('fired'), i * 100);
+        });
+        el.querySelectorAll('.fade-up').forEach((f, i) => {
+          setTimeout(() => f.classList.add('fired'), i * 80);
+        });
+      }
+      if (el.classList.contains('exp')) {
+        el.querySelectorAll('.exp-list li').forEach((li, i) => {
+          setTimeout(() => li.classList.add('show'), 100 + i * 100);
+        });
+      }
+      if (el.classList.contains('pills')) {
+        el.querySelectorAll('.pill').forEach((p, i) => {
+          setTimeout(() => p.classList.add('show'), i * 80);
+        });
+      }
+      if (el.classList.contains('sk-items')) {
+        el.querySelectorAll('span').forEach((s, i) => {
+          setTimeout(() => s.classList.add('show'), i * 70);
+        });
+      }
+      io.unobserve(el);
+    });
+  }, { threshold: 0.15 });
+
+  document.querySelectorAll('.s-row, .exp, .pills, .sk-items').forEach(el => io.observe(el));
+}
+
+// ── CURSOR ──
+const cursor = document.getElementById('cursor');
+const ring   = document.getElementById('cursorRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove', e => {
+  mx=e.clientX; my=e.clientY;
+  cursor.style.left=mx+'px'; cursor.style.top=my+'px';
+});
+(function lerp(){
+  rx+=(mx-rx)*0.1; ry+=(my-ry)*0.1;
+  ring.style.left=rx+'px'; ring.style.top=ry+'px';
+  requestAnimationFrame(lerp);
+})();
+document.querySelectorAll('a, .proj, .pill, .footer-cta').forEach(el => {
+  el.addEventListener('mouseenter', () => ring.classList.add('hovered'));
+  el.addEventListener('mouseleave', () => ring.classList.remove('hovered'));
+});
+
+// ── SCROLL PROGRESS BAR ──
+const progressBar = document.getElementById('progress');
+window.addEventListener('scroll', () => {
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+  progressBar.style.width = pct + '%';
+});
+</script>
+</body>
+</html>
