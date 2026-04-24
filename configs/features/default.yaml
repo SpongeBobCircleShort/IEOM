@@ -1,0 +1,5 @@
+{
+  "window_size_frames": 20,
+  "pause_speed_threshold": 0.03,
+  "smoothing_alpha": 0.35
+}
