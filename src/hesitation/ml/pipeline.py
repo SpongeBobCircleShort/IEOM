@@ -153,6 +153,33 @@ def _load_runtime_model(model_path: str | Path) -> dict[str, Any]:
     }
 
 
+def load_classical_runtime(model_path: str | Path) -> dict[str, Any]:
+    """Load a saved classical artifact for inference-time reuse."""
+    return _load_runtime_model(model_path)
+
+
+def predict_classical_window(
+    runtime: dict[str, Any],
+    features: list[float],
+) -> dict[str, Any]:
+    """Run the saved classical model on one feature window."""
+    x_std = runtime["scaler"].transform([features])
+    state_probabilities = runtime["state"].predict_proba(x_std)[0]
+    predicted_state = runtime["state"].predict(x_std)[0]
+    future_hesitation_probability = float(runtime["future_hesitation"].predict_proba(x_std)[0])
+    future_correction_probability = float(runtime["future_correction"].predict_proba(x_std)[0])
+    return {
+        "predicted_state": predicted_state,
+        "state_probabilities": state_probabilities,
+        "future_hesitation_probability": future_hesitation_probability,
+        "future_correction_probability": future_correction_probability,
+        "thresholds": {
+            "future_hesitation": 0.5,
+            "future_correction": 0.5,
+        },
+    }
+
+
 def evaluate_classical(input_path: str, model_path: str) -> dict[str, Any]:
     runtime = _load_runtime_model(model_path)
     payload = runtime["payload"]

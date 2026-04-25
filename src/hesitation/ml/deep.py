@@ -227,12 +227,33 @@ def _load_checkpoint(model_path: str | Path) -> dict[str, Any]:
     }
 
 
+<<<<<<< HEAD
 def _prepare_eval_sequences(
     rows: list[DatasetRow],
     checkpoint: dict[str,
     Any],
     scaler: StandardScaler
 ) -> dict[str, Any]:
+=======
+def load_deep_runtime(
+    model_path: str | Path,
+    threshold_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Load a saved deep artifact and optional calibrated thresholds."""
+    runtime = _load_checkpoint(model_path)
+    thresholds = DEFAULT_THRESHOLDS
+    if threshold_path is not None:
+        loaded = json.loads(Path(threshold_path).read_text(encoding="utf-8"))
+        thresholds = {
+            "future_hesitation": float(loaded["future_hesitation"]),
+            "future_correction": float(loaded["future_correction"]),
+        }
+    runtime["thresholds"] = thresholds
+    return runtime
+
+
+def _prepare_eval_sequences(rows: list[DatasetRow], checkpoint: dict[str, Any], scaler: StandardScaler) -> dict[str, Any]:
+>>>>>>> bb0e772 (Implement Phase 4 serving and demo layer)
     windows = build_sequence_windows(
         rows,
         window_size=int(checkpoint["window_size"]),
@@ -273,6 +294,26 @@ def _evaluate_predictions(
         ),
         "thresholds": active_thresholds,
         "windows": len(y_state),
+    }
+
+
+def predict_deep_window(
+    runtime: dict[str, Any],
+    sequence_features: list[list[float]],
+) -> dict[str, Any]:
+    """Run the saved deep model on one frame sequence window."""
+    scaled = _scale_sequences([sequence_features], runtime["scaler"])
+    predictions = _run_model(runtime["model"], scaled)
+    state_probabilities = {
+        state_name: float(probability)
+        for state_name, probability in zip(STATE_CLASSES, predictions["state_probs"][0])
+    }
+    return {
+        "predicted_state": predictions["state_pred"][0],
+        "state_probabilities": state_probabilities,
+        "future_hesitation_probability": float(predictions["future_hesitation"][0]),
+        "future_correction_probability": float(predictions["future_correction"][0]),
+        "thresholds": dict(runtime.get("thresholds", DEFAULT_THRESHOLDS)),
     }
 
 

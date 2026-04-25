@@ -11,8 +11,14 @@ requires-python = ">=3.10"
 dependencies = []
 
 [project.optional-dependencies]
+<<<<<<< HEAD
 dev = ["pytest>=8.0"]
 deep = ["torch>=2.2", "matplotlib>=3.8"]
+=======
+dev = ["pytest>=8.0,<9.0", "httpx>=0.27,<1.0"]
+serve = ["fastapi>=0.115,<1.0", "uvicorn>=0.30,<1.0", "streamlit>=1.44,<2.0"]
+deep = ["torch==2.7.1"]
+>>>>>>> bb0e772 (Implement Phase 4 serving and demo layer)
 
 [tool.setuptools]
 package-dir = {"" = "src"}

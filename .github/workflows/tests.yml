@@ -13,8 +13,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install --upgrade pip
-      - run: pip install -e ".[dev]"
-      - run: pytest -q -k "not phase35_torch_smoke and not phase3_model_forward"
+      - run: pip install -e ".[dev,serve]"
+      - run: pytest -q -m "not deep"
 
   unit-deep:
     runs-on: ubuntu-latest
@@ -24,11 +24,11 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install --upgrade pip
-      - run: pip install -e ".[dev]"
+      - run: pip install -e ".[dev,serve]"
       - run: pip install --index-url https://download.pytorch.org/whl/cpu torch==2.7.1
       - run: python -c "import importlib.util; assert importlib.util.find_spec('torch') is not None"
       - run: python -c "import torch; print(torch.__version__)"
-      - run: pytest -q -k "phase35_torch_smoke or phase3_model_forward"
+      - run: pytest -q -m deep
       - run: python scripts/generate_synthetic_dataset.py --output /tmp/deep_synth.jsonl --n-sessions 8 --seed 17
       - run: python scripts/phase2_cli.py train-deep --input /tmp/deep_synth.jsonl --output-dir /tmp/deep_artifacts --window-size 15 --horizon-frames 10 --seed 17 --epochs 6 --batch-size 16
       - run: python scripts/phase2_cli.py evaluate-deep --input /tmp/deep_synth.jsonl --model-path /tmp/deep_artifacts/deep_model.pt --output /tmp/deep_artifacts/deep_eval.json

@@ -3,6 +3,8 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .venv/
+.venv-phase4/
 *.pyc
+*.egg-info/
 data/
 artifacts/
