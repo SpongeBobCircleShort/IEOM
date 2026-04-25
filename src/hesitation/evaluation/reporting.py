@@ -1,4 +1,4 @@
-"""Reporting helpers for Phase 3 model comparison outputs."""
+"""Reporting helpers for Phase 3.5 model comparison outputs."""
 
 from __future__ import annotations
 
@@ -6,6 +6,11 @@ from pathlib import Path
 from typing import Any
 
 from hesitation.deep.serialize import save_json
+
+try:  # pragma: no cover - optional plotting dependency
+    import matplotlib.pyplot as plt
+except Exception:  # pragma: no cover
+    plt = None
 
 
 def write_comparison_report(output_dir: str, report: dict[str, Any]) -> None:
@@ -35,3 +40,23 @@ def write_comparison_report(output_dir: str, report: dict[str, Any]) -> None:
         f"future_correction_auprc,,{summary['future_correction_auprc']['classical']},{summary['future_correction_auprc']['deep']}",
     ]
     (out / "comparison_table.csv").write_text("\n".join(csv_lines), encoding="utf-8")
+
+    if plt is not None:
+        _write_metric_plot(out, summary)
+
+
+def _write_metric_plot(output_dir: Path, summary: dict[str, Any]) -> None:
+    """Write a simple bar plot for primary comparison metrics."""
+    labels = ["Rules", "Classical", "Deep"]
+    acc = [
+        summary["current_state_accuracy"]["rules"],
+        summary["current_state_accuracy"]["classical"],
+        summary["current_state_accuracy"]["deep"],
+    ]
+    plt.figure(figsize=(6, 4))
+    plt.bar(labels, acc)
+    plt.title("Current-state accuracy comparison")
+    plt.ylim(0, 1)
+    plt.tight_layout()
+    plt.savefig(output_dir / "comparison_accuracy.png")
+    plt.close()

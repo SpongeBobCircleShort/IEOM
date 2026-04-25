@@ -82,6 +82,39 @@ def auprc_score(y_true: list[int], y_prob: list[float]) -> float:
     return area
 
 
+def brier_score(y_true: list[int], y_prob: list[float]) -> float:
+    if not y_true:
+        return 0.0
+    return sum((float(t) - p) ** 2 for t, p in zip(y_true, y_prob)) / len(y_true)
+
+
+def expected_calibration_error(y_true: list[int], y_prob: list[float], n_bins: int = 10) -> float:
+    if not y_true:
+        return 0.0
+    ece = 0.0
+    n = len(y_true)
+    for i in range(n_bins):
+        lo = i / n_bins
+        hi = (i + 1) / n_bins
+        idx = [j for j, p in enumerate(y_prob) if lo <= p < hi or (i == n_bins - 1 and p == hi)]
+        if not idx:
+            continue
+        conf = sum(y_prob[j] for j in idx) / len(idx)
+        acc = sum(y_true[j] for j in idx) / len(idx)
+        ece += abs(acc - conf) * (len(idx) / n)
+    return ece
+
+
+def threshold_sweep(y_true: list[int], y_prob: list[float], thresholds: list[float] | None = None) -> list[dict[str, float]]:
+    if thresholds is None:
+        thresholds = [i / 20 for i in range(1, 20)]
+    out: list[dict[str, float]] = []
+    for t in thresholds:
+        m = binary_metrics(y_true, y_prob, threshold=t)
+        out.append({"threshold": t, "precision": float(m["precision"]), "recall": float(m["recall"]), "f1": float(m["f1"])})
+    return out
+
+
 def binary_metrics(y_true: list[int], y_prob: list[float], threshold: float) -> dict[str, object]:
     y_pred = [1 if p >= threshold else 0 for p in y_prob]
     tp = sum(1 for t, p in zip(y_true, y_pred) if t == 1 and p == 1)
@@ -100,6 +133,8 @@ def binary_metrics(y_true: list[int], y_prob: list[float], threshold: float) -> 
         "f1": f1,
         "auroc": auroc_score(y_true, y_prob),
         "auprc": auprc_score(y_true, y_prob),
+        "brier": brier_score(y_true, y_prob),
+        "ece": expected_calibration_error(y_true, y_prob),
         "confusion": {"tp": tp, "tn": tn, "fp": fp, "fn": fn},
         "threshold": threshold,
     }

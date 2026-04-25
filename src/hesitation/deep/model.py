@@ -33,6 +33,14 @@ if nn is not None:
             h = self.dropout(out[:, -1, :])
             return self.state_head(h), self.future_hes_head(h), self.future_corr_head(h)
 
+else:
+
+    class TorchGRUMultiHead:  # pragma: no cover - only used when torch unavailable
+        """Runtime placeholder when torch is not available."""
+
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            raise RuntimeError("PyTorch is required for TorchGRUMultiHead")
+
 
 @dataclass(slots=True)
 class FallbackDeepModel:
@@ -54,8 +62,3 @@ class FallbackDeepModel:
 
     def predict_future(self, x: list[list[float]]) -> tuple[list[float], list[float]]:
         return self.future_hes_model.predict_proba(x), self.future_corr_model.predict_proba(x)
-
-
-class TorchGRUMultiHead:  # pragma: no cover - only used when torch unavailable
-    def __init__(self, *args: object, **kwargs: object) -> None:
-        raise RuntimeError("PyTorch is required for TorchGRUMultiHead")
