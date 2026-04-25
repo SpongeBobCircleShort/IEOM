@@ -18,8 +18,13 @@ class ScenarioConfig:
     correction_rework_prob: float = 0.10
     overlap_risk_prob: float = 0.08
     ready_for_robot_action_prob: float = 0.20
+    ambiguous_transition_prob: float = 0.05
+    domain_gap_scale: float = 1.0
+    correction_burst_prob: float = 0.08
     noise: NoiseConfig = field(default_factory=NoiseConfig)
 
     def __post_init__(self) -> None:
         if self.n_steps <= 0:
             raise ValueError("n_steps must be > 0")
+        if self.domain_gap_scale <= 0:
+            raise ValueError("domain_gap_scale must be > 0")
