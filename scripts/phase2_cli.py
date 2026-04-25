@@ -18,8 +18,15 @@ def _add_common_dataset_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--horizon-frames", type=int, default=20)
 
 
+def _add_common_deep_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--input", required=True)
+    parser.add_argument("--window-size", type=int, default=20)
+    parser.add_argument("--horizon-frames", type=int, default=20)
+    parser.add_argument("--seed", type=int, default=7)
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Phase 2 classical ML workflows")
+    parser = argparse.ArgumentParser(description="Phase 2 classical + Phase 3 deep ML workflows")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     train = sub.add_parser("train-classical")
@@ -47,6 +54,30 @@ def main() -> None:
     policy.add_argument("--future-hesitation-prob", type=float, required=True)
     policy.add_argument("--future-correction-prob", type=float, required=True)
     policy.add_argument("--workspace-distance", type=float, default=0.5)
+
+    train_deep = sub.add_parser("train-deep")
+    _add_common_deep_args(train_deep)
+    train_deep.add_argument("--output-dir", required=True)
+    train_deep.add_argument("--hidden-size", type=int, default=24)
+    train_deep.add_argument("--epochs", type=int, default=12)
+    train_deep.add_argument("--batch-size", type=int, default=32)
+    train_deep.add_argument("--learning-rate", type=float, default=1e-2)
+
+    evaluate_deep = sub.add_parser("evaluate-deep")
+    evaluate_deep.add_argument("--input", required=True)
+    evaluate_deep.add_argument("--model-path", required=True)
+    evaluate_deep.add_argument("--output", required=False)
+
+    tune = sub.add_parser("tune-thresholds")
+    tune.add_argument("--input", required=True)
+    tune.add_argument("--model-path", required=True)
+    tune.add_argument("--output", required=True)
+
+    evaluate_calibrated = sub.add_parser("evaluate-deep-calibrated")
+    evaluate_calibrated.add_argument("--input", required=True)
+    evaluate_calibrated.add_argument("--model-path", required=True)
+    evaluate_calibrated.add_argument("--threshold-path", required=True)
+    evaluate_calibrated.add_argument("--output", required=False)
 
     args = parser.parse_args()
 
@@ -91,6 +122,49 @@ def main() -> None:
             )
         )
         print(json.dumps(rec.to_dict(), indent=2))
+        return
+
+    if args.cmd == "train-deep":
+        from hesitation.ml.deep import train_deep
+
+        metrics = train_deep(
+            input_path=args.input,
+            output_dir=args.output_dir,
+            window_size=args.window_size,
+            horizon_frames=args.horizon_frames,
+            seed=args.seed,
+            hidden_size=args.hidden_size,
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            learning_rate=args.learning_rate,
+        )
+        print(json.dumps(metrics, indent=2))
+        return
+
+    if args.cmd == "evaluate-deep":
+        from hesitation.ml.deep import evaluate_deep
+
+        metrics = evaluate_deep(args.input, args.model_path, output_path=args.output)
+        print(json.dumps(metrics, indent=2))
+        return
+
+    if args.cmd == "tune-thresholds":
+        from hesitation.ml.deep import tune_thresholds
+
+        thresholds = tune_thresholds(args.input, args.model_path, output_path=args.output)
+        print(json.dumps(thresholds, indent=2))
+        return
+
+    if args.cmd == "evaluate-deep-calibrated":
+        from hesitation.ml.deep import evaluate_deep_calibrated
+
+        metrics = evaluate_deep_calibrated(
+            args.input,
+            args.model_path,
+            args.threshold_path,
+            output_path=args.output,
+        )
+        print(json.dumps(metrics, indent=2))
         return
 
     raise RuntimeError("Unhandled command")
