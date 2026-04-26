@@ -1,0 +1,14 @@
+{
+  "dataset_name": "chico",
+  "records_total": 112,
+  "mapped_records": 112,
+  "dropped_records": 0,
+  "unsupported_fields": {
+    "extra_sensor": 112
+  },
+  "assumptions": [
+    "timestamp converted to milliseconds when source provides seconds",
+    "action labels normalized through action_map",
+    "missing hand_right/torso fields preserved as null"
+  ]
+}
