@@ -87,3 +87,34 @@ Apple Silicon and CUDA installs should use the platform-appropriate PyTorch whee
 - The Phase 3 smoke path uses a small GRU over per-frame kinematic signals and is intended to prove torch training/checkpoint/inference/calibration in CI.
 - Config files are `.yaml` names with JSON-compatible content.
 - Policy recommendation is advisory only and **not** a safety-certified controller.
+
+## Baseline handoff data scraping (ideal trajectories)
+```bash
+python scripts/scrape_handoff_baseline_data.py \
+  --output-dir data/baseline_scraped \
+  --human-speed 0.80 \
+  --robot-speeds 0.40 0.60 0.75 \
+  --sqlite-path data/baseline_scraped/handoff_baseline.db
+
+
+python scripts/analyze_handoff_baseline.py \
+  --summary-csv data/baseline_scraped/handoff_baseline_summary.csv \
+  --report-path data/baseline_scraped/handoff_next_steps.md
+```
+
+This generates:
+- `data/baseline_scraped/handoff_baseline_frames.csv` (frame-level positions + separation)
+- `data/baseline_scraped/handoff_baseline_summary.csv` (safety/efficiency metrics by robot-speed scenario)
+- `data/baseline_scraped/handoff_baseline.db` (SQLite database for VS Code SQL extensions)
+
+
+After generating data, produce an actionable "what next" report:
+- `data/baseline_scraped/handoff_next_steps.md` summarizes the speed-vs-safety tradeoff.
+- It also gives a concrete hesitation experiment plan and adaptive-control success criteria.
+
+### Use an existing database in VS Code
+1. Set `--sqlite-path` to your existing `.db` file path when running the script.
+2. In VS Code, open the database with a SQLite extension (for example, SQLite Viewer).
+3. Query:
+   - `handoff_baseline_frames`
+   - `handoff_baseline_summary`
