@@ -1,0 +1,8 @@
+% MATLAB linting configuration for IEOM project
+% Suppress false positive warnings for integration test code
+
+% Suppress warnings for test files where variables are intentionally created
+% but used in flexible ways (e.g., passed to functions)
+19		% Variable might be unused
+%41		% Function with no output
+%52		% Functions declared but no output

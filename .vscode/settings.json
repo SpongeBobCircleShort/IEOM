@@ -1,0 +1,15 @@
+{
+  "[matlab]": {
+    "editor.defaultFormatter": "mathworks.matlab",
+    "editor.formatOnSave": false
+  },
+  "matlab.linter.enable": true,
+  "matlab.linter.ignoreIssueId": [
+    "NASGU",
+    "UNRCH",
+    "NOPRT",
+    "UNASS"
+  ],
+  "matlab.linter.ignorePattern": "^(test_|.*_test\\.m$)",
+  "matlab.linter.resolveUnknownSymbols": true
+}
