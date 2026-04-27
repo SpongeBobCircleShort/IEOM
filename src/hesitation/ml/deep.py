@@ -226,15 +226,6 @@ def _load_checkpoint(model_path: str | Path) -> dict[str, Any]:
         "scaler": scaler,
     }
 
-
-<<<<<<< HEAD
-def _prepare_eval_sequences(
-    rows: list[DatasetRow],
-    checkpoint: dict[str,
-    Any],
-    scaler: StandardScaler
-) -> dict[str, Any]:
-=======
 def load_deep_runtime(
     model_path: str | Path,
     threshold_path: str | Path | None = None,
@@ -253,7 +244,6 @@ def load_deep_runtime(
 
 
 def _prepare_eval_sequences(rows: list[DatasetRow], checkpoint: dict[str, Any], scaler: StandardScaler) -> dict[str, Any]:
->>>>>>> bb0e772 (Implement Phase 4 serving and demo layer)
     windows = build_sequence_windows(
         rows,
         window_size=int(checkpoint["window_size"]),

@@ -1,0 +1,45 @@
+{
+  "state_metrics": {
+    "accuracy": 0.0,
+    "macro_f1": 0.0,
+    "per_class": {
+      "mild_hesitation": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "normal_progress": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "confusion_matrix": {
+      "mild_hesitation": {
+        "mild_hesitation": 0,
+        "normal_progress": 0
+      },
+      "normal_progress": {
+        "mild_hesitation": 15,
+        "normal_progress": 0
+      }
+    }
+  },
+  "hardest_confusion_pairs": [
+    {
+      "true_label": "normal_progress",
+      "predicted_label": "mild_hesitation",
+      "count": 15
+    }
+  ],
+  "future_hesitation_threshold": 0.5,
+  "future_correction_threshold": 0.5,
+  "future_hesitation_fp": 15,
+  "future_hesitation_fn": 0,
+  "future_correction_fp": 15,
+  "future_correction_fn": 0,
+  "trigger_audit": {
+    "trigger_counts": {},
+    "trigger_state_breakdown": {}
+  }
+}

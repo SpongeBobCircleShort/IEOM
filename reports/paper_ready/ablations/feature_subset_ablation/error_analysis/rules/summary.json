@@ -1,0 +1,181 @@
+{
+  "state_metrics": {
+    "accuracy": 0.19675675675675675,
+    "macro_f1": 0.12509122346758816,
+    "per_class": {
+      "correction_rework": {
+        "precision": 0.19881305637982197,
+        "recall": 0.7570621468926554,
+        "f1": 0.3149236192714454
+      },
+      "mild_hesitation": {
+        "precision": 0.2564102564102564,
+        "recall": 0.08403361344537816,
+        "f1": 0.12658227848101264
+      },
+      "normal_progress": {
+        "precision": 0.125,
+        "recall": 0.06293706293706294,
+        "f1": 0.08372093023255814
+      },
+      "overlap_risk": {
+        "precision": 0.05555555555555555,
+        "recall": 0.007246376811594203,
+        "f1": 0.01282051282051282
+      },
+      "ready_for_robot_action": {
+        "precision": 0.125,
+        "recall": 0.045454545454545456,
+        "f1": 0.06666666666666667
+      },
+      "strong_hesitation": {
+        "precision": 0.27450980392156865,
+        "recall": 0.09929078014184398,
+        "f1": 0.14583333333333334
+      }
+    },
+    "confusion_matrix": {
+      "correction_rework": {
+        "correction_rework": 134,
+        "mild_hesitation": 16,
+        "normal_progress": 13,
+        "overlap_risk": 4,
+        "ready_for_robot_action": 4,
+        "strong_hesitation": 6
+      },
+      "mild_hesitation": {
+        "correction_rework": 164,
+        "mild_hesitation": 20,
+        "normal_progress": 26,
+        "overlap_risk": 6,
+        "ready_for_robot_action": 15,
+        "strong_hesitation": 7
+      },
+      "normal_progress": {
+        "correction_rework": 98,
+        "mild_hesitation": 9,
+        "normal_progress": 9,
+        "overlap_risk": 3,
+        "ready_for_robot_action": 4,
+        "strong_hesitation": 20
+      },
+      "overlap_risk": {
+        "correction_rework": 104,
+        "mild_hesitation": 13,
+        "normal_progress": 14,
+        "overlap_risk": 1,
+        "ready_for_robot_action": 3,
+        "strong_hesitation": 3
+      },
+      "ready_for_robot_action": {
+        "correction_rework": 71,
+        "mild_hesitation": 4,
+        "normal_progress": 5,
+        "overlap_risk": 3,
+        "ready_for_robot_action": 4,
+        "strong_hesitation": 1
+      },
+      "strong_hesitation": {
+        "correction_rework": 103,
+        "mild_hesitation": 16,
+        "normal_progress": 5,
+        "overlap_risk": 1,
+        "ready_for_robot_action": 2,
+        "strong_hesitation": 14
+      }
+    }
+  },
+  "hardest_confusion_pairs": [
+    {
+      "true_label": "mild_hesitation",
+      "predicted_label": "correction_rework",
+      "count": 164
+    },
+    {
+      "true_label": "overlap_risk",
+      "predicted_label": "correction_rework",
+      "count": 104
+    },
+    {
+      "true_label": "strong_hesitation",
+      "predicted_label": "correction_rework",
+      "count": 103
+    },
+    {
+      "true_label": "normal_progress",
+      "predicted_label": "correction_rework",
+      "count": 98
+    },
+    {
+      "true_label": "ready_for_robot_action",
+      "predicted_label": "correction_rework",
+      "count": 71
+    }
+  ],
+  "future_hesitation_threshold": 0.5,
+  "future_correction_threshold": 0.5,
+  "future_hesitation_fp": 44,
+  "future_hesitation_fn": 390,
+  "future_correction_fp": 176,
+  "future_correction_fn": 297,
+  "trigger_audit": {
+    "trigger_counts": {
+      "strong_pause": 51,
+      "correction_backtrack": 674,
+      "mild_pause": 78,
+      "normal_progress": 72,
+      "ready_progress": 32,
+      "overlap_distance_pause": 18
+    },
+    "trigger_state_breakdown": {
+      "correction_backtrack": {
+        "normal_progress": 98,
+        "ready_for_robot_action": 71,
+        "mild_hesitation": 164,
+        "strong_hesitation": 103,
+        "correction_rework": 134,
+        "overlap_risk": 104
+      },
+      "mild_pause": {
+        "correction_rework": 16,
+        "ready_for_robot_action": 4,
+        "mild_hesitation": 20,
+        "strong_hesitation": 16,
+        "normal_progress": 9,
+        "overlap_risk": 13
+      },
+      "normal_progress": {
+        "overlap_risk": 14,
+        "ready_for_robot_action": 5,
+        "mild_hesitation": 26,
+        "correction_rework": 13,
+        "normal_progress": 9,
+        "strong_hesitation": 5
+      },
+      "overlap_distance_pause": {
+        "correction_rework": 4,
+        "normal_progress": 3,
+        "ready_for_robot_action": 3,
+        "mild_hesitation": 6,
+        "overlap_risk": 1,
+        "strong_hesitation": 1
+      },
+      "ready_progress": {
+        "mild_hesitation": 15,
+        "ready_for_robot_action": 4,
+        "overlap_risk": 3,
+        "correction_rework": 4,
+        "strong_hesitation": 2,
+        "normal_progress": 4
+      },
+      "strong_pause": {
+        "normal_progress": 20,
+        "correction_rework": 6,
+        "overlap_risk": 3,
+        "strong_hesitation": 14,
+        "mild_hesitation": 7,
+        "ready_for_robot_action": 1
+      }
+    }
+  }
+}

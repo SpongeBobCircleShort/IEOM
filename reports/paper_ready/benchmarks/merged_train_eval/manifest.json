@@ -1,0 +1,17 @@
+{
+  "run": "merged_train_eval",
+  "display_name": "Merged CHICO+HA-ViD train/eval",
+  "train_datasets": [
+    "chico",
+    "ha_vid"
+  ],
+  "eval_datasets": [
+    "chico",
+    "ha_vid"
+  ],
+  "feature_indices": null,
+  "frame_feature_indices": null,
+  "horizon_frames": 5,
+  "row_overrides": null,
+  "notes": []
+}

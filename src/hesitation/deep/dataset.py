@@ -22,6 +22,7 @@ FRAME_FEATURE_ORDER = [
 
 class SequenceWindow(TypedDict):
     session_id: str
+    dataset_name: str
     end_frame_idx: int
     sequence: list[list[float]]
     current_state: str
@@ -78,6 +79,7 @@ def build_sequence_windows(
             windows.append(
                 SequenceWindow(
                     session_id=sid,
+                    dataset_name=str(session_rows[end - 1].get("dataset_name", "unknown")),
                     end_frame_idx=int(session_rows[end - 1]["frame_idx"]),
                     sequence=sequence,
                     current_state=states[end - 1],

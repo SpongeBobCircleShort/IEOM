@@ -32,81 +32,127 @@ def _load_model(path: str | Path) -> dict[str, Any]:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def train_classical(
-    input_path: str,
+def _project_feature_rows(
+    feature_rows: list[list[float]],
+    feature_indices: list[int] | None,
+) -> list[list[float]]:
+    if feature_indices is None:
+        return feature_rows
+    return [[row[index] for index in feature_indices] for row in feature_rows]
+
+
+def _label_space(*label_sets: list[str]) -> list[str]:
+    labels: set[str] = set()
+    for values in label_sets:
+        labels.update(values)
+    return sorted(labels)
+
+
+def feature_window_from_window(window: dict[str, object]) -> FeatureWindow:
+    """Rebuild a rule-engine feature window from a vectorized classical example."""
+    values = [float(value) for value in window["features"]]
+    return FeatureWindow(
+        session_id=str(window["session_id"]),
+        end_frame_idx=int(window["end_frame_idx"]),
+        mean_speed=values[0],
+        speed_variance=values[1],
+        pause_ratio=values[2],
+        direction_changes=int(values[3]),
+        progress_delta=values[4],
+        backtrack_ratio=values[5],
+        mean_workspace_distance=values[6],
+    )
+
+
+def predict_rules_windows(
+    windows: list[dict[str, object]],
+) -> list[dict[str, Any]]:
+    """Run the rules baseline over precomputed feature windows."""
+    rules_cfg = load_config("configs/baseline/rules_v1.yaml")
+    outputs: list[dict[str, Any]] = []
+    for window in windows:
+        rules_out = classify_window(
+            feature_window_from_window(window),
+            thresholds=rules_cfg["thresholds"],
+            risk_cfg=rules_cfg["risk"],
+        )
+        outputs.append(
+            {
+                "session_id": str(window["session_id"]),
+                "end_frame_idx": int(window["end_frame_idx"]),
+                "predicted_state": rules_out.current_state.value,
+                "triggered_rules": list(rules_out.triggered_rules),
+                "hesitation_risk": float(rules_out.hesitation_risk),
+                "correction_rework_risk": float(rules_out.correction_rework_risk),
+                "overlap_risk": float(rules_out.overlap_risk),
+            }
+        )
+    return outputs
+
+
+def train_classical_on_windows(
+    train_windows: list[dict[str, object]],
+    eval_windows: list[dict[str, object]],
     output_dir: str,
     window_size: int,
     pause_speed_threshold: float,
     horizon_frames: int,
+    feature_indices: list[int] | None = None,
 ) -> dict[str, Any]:
-    rows = load_rows(input_path)
-    windows = build_windows(rows, window_size, pause_speed_threshold, horizon_frames)
-    train, val = split_train_val(windows)
-
-    x_train = [w["features"] for w in train]
-    x_val = [w["features"] for w in val]
+    """Train and evaluate the classical baseline on explicit window splits."""
+    x_train_full = [[float(value) for value in window["features"]] for window in train_windows]
+    x_eval_full = [[float(value) for value in window["features"]] for window in eval_windows]
+    x_train = _project_feature_rows(x_train_full, feature_indices)
+    x_eval = _project_feature_rows(x_eval_full, feature_indices)
 
     scaler = StandardScaler.fit(x_train)
     x_train_std = scaler.transform(x_train)
-    x_val_std = scaler.transform(x_val)
+    x_eval_std = scaler.transform(x_eval)
 
-    classes = sorted({str(w["current_state"]) for w in train})
-    y_state_train = [str(w["current_state"]) for w in train]
-    y_state_val = [str(w["current_state"]) for w in val]
+    classes = _label_space(
+        [str(window["current_state"]) for window in train_windows],
+        [str(window["current_state"]) for window in eval_windows],
+    )
+    y_state_train = [str(window["current_state"]) for window in train_windows]
+    y_state_eval = [str(window["current_state"]) for window in eval_windows]
     state_model = _fit_ovr_model(x_train_std, y_state_train, classes=classes)
 
-    y_fh_train = [int(w["future_hesitation"]) for w in train]
-    y_fh_val = [int(w["future_hesitation"]) for w in val]
-    fh_model = BinaryLogisticRegression(n_features=len(FEATURE_ORDER))
+    y_fh_train = [int(window["future_hesitation"]) for window in train_windows]
+    y_fh_eval = [int(window["future_hesitation"]) for window in eval_windows]
+    fh_model = BinaryLogisticRegression(n_features=len(x_train_std[0]))
     fh_model.fit(x_train_std, y_fh_train)
 
-    y_fc_train = [int(w["future_correction"]) for w in train]
-    y_fc_val = [int(w["future_correction"]) for w in val]
-    fc_model = BinaryLogisticRegression(n_features=len(FEATURE_ORDER))
+    y_fc_train = [int(window["future_correction"]) for window in train_windows]
+    y_fc_eval = [int(window["future_correction"]) for window in eval_windows]
+    fc_model = BinaryLogisticRegression(n_features=len(x_train_std[0]))
     fc_model.fit(x_train_std, y_fc_train)
 
-    state_pred = state_model.predict(x_val_std)
-    state_model.predict_proba(x_val_std)
-    fh_probs = fh_model.predict_proba(x_val_std)
-    [1 if p >= 0.5 else 0 for p in fh_probs]
-    fc_probs = fc_model.predict_proba(x_val_std)
-    [1 if p >= 0.5 else 0 for p in fc_probs]
-
-    rules_cfg = load_config("configs/baseline/rules_v1.yaml")
-    rules_pred: list[str] = []
-    for w in val:
-        f = FeatureWindow(
-            session_id=str(w["session_id"]),
-            end_frame_idx=int(w["end_frame_idx"]),
-            mean_speed=float(w["features"][0]),
-            speed_variance=float(w["features"][1]),
-            pause_ratio=float(w["features"][2]),
-            direction_changes=int(w["features"][3]),
-            progress_delta=float(w["features"][4]),
-            backtrack_ratio=float(w["features"][5]),
-            mean_workspace_distance=float(w["features"][6]),
-        )
-        rules_out = classify_window(
-            f,
-            thresholds=rules_cfg["thresholds"],
-            risk_cfg=rules_cfg["risk"]
-        )
-        rules_pred.append(rules_out.current_state.value)
+    state_pred = state_model.predict(x_eval_std)
+    fh_probs = fh_model.predict_proba(x_eval_std)
+    fc_probs = fc_model.predict_proba(x_eval_std)
+    rules_outputs = predict_rules_windows(eval_windows)
+    rules_pred = [str(record["predicted_state"]) for record in rules_outputs]
 
     metrics = {
-        "current_state_classical": multiclass_metrics(y_state_val, state_pred, classes),
-        "current_state_rules": multiclass_metrics(y_state_val, rules_pred, classes),
-        "future_hesitation": binary_metrics(y_fh_val, fh_probs, threshold=0.5),
-        "future_correction": binary_metrics(y_fc_val, fc_probs, threshold=0.5),
+        "current_state_classical": multiclass_metrics(y_state_eval, state_pred, classes),
+        "current_state_rules": multiclass_metrics(y_state_eval, rules_pred, classes),
+        "future_hesitation": binary_metrics(y_fh_eval, fh_probs, threshold=0.5),
+        "future_correction": binary_metrics(y_fc_eval, fc_probs, threshold=0.5),
         "counts": {
-            "train_windows": len(train),
-            "val_windows": len(val),
+            "train_windows": len(train_windows),
+            "eval_windows": len(eval_windows),
         },
     }
 
+    selected_feature_order = [
+        FEATURE_ORDER[index]
+        for index in (feature_indices if feature_indices is not None else list(range(len(FEATURE_ORDER))))
+    ]
     output = Path(output_dir)
     model_payload = {
         "feature_order": FEATURE_ORDER,
+        "selected_feature_order": selected_feature_order,
+        "feature_indices": feature_indices,
         "scaler": {"means": scaler.means, "stds": scaler.stds},
         "state": {
             "classes": classes,
@@ -122,6 +168,27 @@ def train_classical(
     _save_model(output / "classical_model.json", model_payload)
     _save_model(output / "metrics.json", metrics)
     return metrics
+
+
+def train_classical(
+    input_path: str,
+    output_dir: str,
+    window_size: int,
+    pause_speed_threshold: float,
+    horizon_frames: int,
+) -> dict[str, Any]:
+    """Train the classical baseline using the default session holdout split."""
+    rows = load_rows(input_path)
+    windows = build_windows(rows, window_size, pause_speed_threshold, horizon_frames)
+    train, val = split_train_val(windows)
+    return train_classical_on_windows(
+        train_windows=train,
+        eval_windows=val,
+        output_dir=output_dir,
+        window_size=window_size,
+        pause_speed_threshold=pause_speed_threshold,
+        horizon_frames=horizon_frames,
+    )
 
 
 def _load_runtime_model(model_path: str | Path) -> dict[str, Any]:
@@ -163,7 +230,12 @@ def predict_classical_window(
     features: list[float],
 ) -> dict[str, Any]:
     """Run the saved classical model on one feature window."""
-    x_std = runtime["scaler"].transform([features])
+    payload = runtime["payload"]
+    feature_indices = payload.get("feature_indices")
+    model_features = features
+    if feature_indices is not None and len(features) != len(payload.get("selected_feature_order", [])):
+        model_features = [features[index] for index in feature_indices]
+    x_std = runtime["scaler"].transform([model_features])
     state_probabilities = runtime["state"].predict_proba(x_std)[0]
     predicted_state = runtime["state"].predict(x_std)[0]
     future_hesitation_probability = float(runtime["future_hesitation"].predict_proba(x_std)[0])
@@ -180,7 +252,34 @@ def predict_classical_window(
     }
 
 
+def evaluate_classical_windows(
+    runtime: dict[str, Any],
+    windows: list[dict[str, object]],
+) -> dict[str, Any]:
+    """Evaluate a saved classical model against an explicit evaluation split."""
+    y_state = [str(window["current_state"]) for window in windows]
+    state_predictions: list[str] = []
+    y_fh = [int(window["future_hesitation"]) for window in windows]
+    y_fh_probs: list[float] = []
+    y_fc = [int(window["future_correction"]) for window in windows]
+    y_fc_probs: list[float] = []
+    for window in windows:
+        prediction = predict_classical_window(runtime, [float(value) for value in window["features"]])
+        state_predictions.append(str(prediction["predicted_state"]))
+        y_fh_probs.append(float(prediction["future_hesitation_probability"]))
+        y_fc_probs.append(float(prediction["future_correction_probability"]))
+
+    classes = _label_space(y_state, list(runtime["state"].classes), state_predictions)
+    return {
+        "current_state_classical": multiclass_metrics(y_state, state_predictions, classes),
+        "future_hesitation": binary_metrics(y_fh, y_fh_probs, threshold=0.5),
+        "future_correction": binary_metrics(y_fc, y_fc_probs, threshold=0.5),
+        "windows": len(windows),
+    }
+
+
 def evaluate_classical(input_path: str, model_path: str) -> dict[str, Any]:
+    """Evaluate the classical model using the default session holdout split."""
     runtime = _load_runtime_model(model_path)
     payload = runtime["payload"]
     rows = load_rows(input_path)
@@ -191,26 +290,7 @@ def evaluate_classical(input_path: str, model_path: str) -> dict[str, Any]:
         horizon_frames=int(payload["horizon_frames"]),
     )
     _, val = split_train_val(windows)
-    x_val = [w["features"] for w in val]
-    x_std = runtime["scaler"].transform(x_val)
-
-    y_state = [str(w["current_state"]) for w in val]
-    y_state_pred = runtime["state"].predict(x_std)
-    y_fh = [int(w["future_hesitation"]) for w in val]
-    y_fh_probs = runtime["future_hesitation"].predict_proba(x_std)
-    y_fc = [int(w["future_correction"]) for w in val]
-    y_fc_probs = runtime["future_correction"].predict_proba(x_std)
-
-    return {
-        "current_state_classical": multiclass_metrics(
-            y_state,
-            y_state_pred,
-            runtime["state"].classes
-        ),
-        "future_hesitation": binary_metrics(y_fh, y_fh_probs, threshold=0.5),
-        "future_correction": binary_metrics(y_fc, y_fc_probs, threshold=0.5),
-        "windows": len(val),
-    }
+    return evaluate_classical_windows(runtime, val)
 
 
 def infer_sequence(input_path: str, model_path: str) -> list[dict[str, Any]]:

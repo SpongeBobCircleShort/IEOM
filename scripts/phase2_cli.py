@@ -18,6 +18,7 @@ from hesitation.deep.pipeline import (
     train_deep_multiseed,
     tune_thresholds,
 )
+from hesitation.evaluation.suite import run_benchmark_suite
 from hesitation.io.config import load_config
 from hesitation.io.writers import write_jsonl
 from hesitation.ml.pipeline import evaluate_classical, infer_sequence, predict_future_risk, train_classical
@@ -160,6 +161,10 @@ def main() -> None:
     compare_ms.add_argument("--seeds", default="11,22,33")
     compare_ms.add_argument("--output-dir", required=True)
 
+    bench_suite = sub.add_parser("run-benchmark-suite")
+    bench_suite.add_argument("--config", required=True)
+    bench_suite.add_argument("--output-dir", required=True)
+
     gen_ext = sub.add_parser("generate-scenarios-extended")
     gen_ext.add_argument("--output", required=True)
     gen_ext.add_argument(
@@ -282,6 +287,11 @@ def main() -> None:
             seeds=_parse_seed_list(args.seeds),
             output_dir=args.output_dir,
         )
+        print(json.dumps(metrics, indent=2))
+        return
+
+    if args.cmd == "run-benchmark-suite":
+        metrics = run_benchmark_suite(args.config, args.output_dir)
         print(json.dumps(metrics, indent=2))
         return
 

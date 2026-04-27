@@ -7,11 +7,6 @@ from typing import Any
 
 from hesitation.deep.serialize import save_json
 
-try:  # pragma: no cover - optional plotting dependency
-    import matplotlib.pyplot as plt
-except Exception:  # pragma: no cover
-    plt = None
-
 
 def write_comparison_report(output_dir: str, report: dict[str, Any]) -> None:
     """Persist machine-readable and markdown summary artifacts."""
@@ -41,12 +36,16 @@ def write_comparison_report(output_dir: str, report: dict[str, Any]) -> None:
     ]
     (out / "comparison_table.csv").write_text("\n".join(csv_lines), encoding="utf-8")
 
-    if plt is not None:
-        _write_metric_plot(out, summary)
+    _write_metric_plot(out, summary)
 
 
 def _write_metric_plot(output_dir: Path, summary: dict[str, Any]) -> None:
     """Write a simple bar plot for primary comparison metrics."""
+    try:  # pragma: no cover - optional plotting dependency
+        import matplotlib.pyplot as plt
+    except Exception:  # pragma: no cover
+        return
+
     labels = ["Rules", "Classical", "Deep"]
     acc = [
         summary["current_state_accuracy"]["rules"],

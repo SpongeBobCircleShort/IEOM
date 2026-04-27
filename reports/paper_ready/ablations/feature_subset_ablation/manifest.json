@@ -1,0 +1,32 @@
+{
+  "run": "feature_subset_ablation",
+  "display_name": "Feature subset ablation",
+  "train_datasets": [
+    "chico",
+    "ha_vid"
+  ],
+  "eval_datasets": [
+    "chico",
+    "ha_vid"
+  ],
+  "feature_indices": [
+    0,
+    2,
+    4,
+    5,
+    6
+  ],
+  "frame_feature_indices": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "horizon_frames": 5,
+  "row_overrides": null,
+  "notes": [
+    "Drops direct XY position channels and retains motion/context features."
+  ]
+}

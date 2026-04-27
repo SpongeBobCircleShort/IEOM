@@ -1,0 +1,29 @@
+{
+  "state_metrics": {
+    "accuracy": 1.0,
+    "macro_f1": 1.0,
+    "per_class": {
+      "normal_progress": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    },
+    "confusion_matrix": {
+      "normal_progress": {
+        "normal_progress": 15
+      }
+    }
+  },
+  "hardest_confusion_pairs": [],
+  "future_hesitation_threshold": 0.5,
+  "future_correction_threshold": 0.5,
+  "future_hesitation_fp": 0,
+  "future_hesitation_fn": 0,
+  "future_correction_fp": 14,
+  "future_correction_fn": 0,
+  "trigger_audit": {
+    "trigger_counts": {},
+    "trigger_state_breakdown": {}
+  }
+}

@@ -11,6 +11,7 @@ from typing import Any
 
 from hesitation.baselines.rules_engine import classify_window
 from hesitation.deep.dataset import (
+    FRAME_FEATURE_ORDER,
     SequenceWindow,
     build_sequence_windows,
     load_rows,
@@ -51,6 +52,42 @@ class DeepTrainConfig:
 
 def _flatten_sequence(seq: list[list[float]]) -> list[float]:
     return [value for row in seq for value in row]
+
+
+def _project_sequence(
+    sequence: list[list[float]],
+    frame_feature_indices: list[int] | None,
+) -> list[list[float]]:
+    if frame_feature_indices is None:
+        return sequence
+    return [[row[index] for index in frame_feature_indices] for row in sequence]
+
+
+def _project_windows(
+    windows: list[SequenceWindow],
+    frame_feature_indices: list[int] | None,
+) -> list[SequenceWindow]:
+    if frame_feature_indices is None:
+        return windows
+    return [
+        SequenceWindow(
+            session_id=window["session_id"],
+            dataset_name=window["dataset_name"],
+            end_frame_idx=window["end_frame_idx"],
+            sequence=_project_sequence(window["sequence"], frame_feature_indices),
+            current_state=window["current_state"],
+            future_hesitation=window["future_hesitation"],
+            future_correction=window["future_correction"],
+        )
+        for window in windows
+    ]
+
+
+def _label_space(*label_sets: list[str]) -> list[str]:
+    labels: set[str] = set()
+    for values in label_sets:
+        labels.update(values)
+    return sorted(labels)
 
 
 def _fit_ovr(
@@ -111,15 +148,21 @@ def _train_fallback(
     val: list[SequenceWindow],
     output_dir: str,
     cfg: DeepTrainConfig,
+    frame_feature_indices: list[int] | None = None,
 ) -> dict[str, Any]:
-    x_train = [_flatten_sequence(w["sequence"]) for w in train]
-    x_val = [_flatten_sequence(w["sequence"]) for w in val]
+    train_projected = _project_windows(train, frame_feature_indices)
+    val_projected = _project_windows(val, frame_feature_indices)
+    x_train = [_flatten_sequence(w["sequence"]) for w in train_projected]
+    x_val = [_flatten_sequence(w["sequence"]) for w in val_projected]
 
     scaler = StandardScaler.fit(x_train)
     x_train_std = scaler.transform(x_train)
     x_val_std = scaler.transform(x_val)
 
-    classes = sorted({w["current_state"] for w in train})
+    classes = _label_space(
+        [w["current_state"] for w in train],
+        [w["current_state"] for w in val],
+    )
     y_state_train = [w["current_state"] for w in train]
     y_state_val = [w["current_state"] for w in val]
     state_model = _fit_ovr(x_train_std, y_state_train, classes)
@@ -157,6 +200,12 @@ def _train_fallback(
         "backend": "fallback",
         "window_size": cfg.window_size,
         "horizon_frames": cfg.horizon_frames,
+        "frame_feature_order": [
+            name
+            for index, name in enumerate(FRAME_FEATURE_ORDER)
+            if frame_feature_indices is None or index in frame_feature_indices
+        ],
+        "frame_feature_indices": frame_feature_indices,
         "scaler": {"means": scaler.means, "stds": scaler.stds},
         "classes": classes,
         "state": {
@@ -193,13 +242,19 @@ def _torch_train(
     val: list[SequenceWindow],
     output_dir: str,
     cfg: DeepTrainConfig,
+    frame_feature_indices: list[int] | None = None,
 ) -> dict[str, Any]:
     assert torch is not None
     rng = random.Random(cfg.seed)
     random.seed(cfg.seed)
     torch.manual_seed(cfg.seed)
 
-    classes = sorted({w["current_state"] for w in train})
+    train_projected = _project_windows(train, frame_feature_indices)
+    val_projected = _project_windows(val, frame_feature_indices)
+    classes = _label_space(
+        [w["current_state"] for w in train],
+        [w["current_state"] for w in val],
+    )
     class_to_idx = {name: i for i, name in enumerate(classes)}
 
     def to_tensor(split: list[SequenceWindow]) -> tuple[Any, Any, Any, Any]:
@@ -209,8 +264,8 @@ def _torch_train(
         y_fc = torch.tensor([w["future_correction"] for w in split], dtype=torch.float32).unsqueeze(1)
         return x, y_state, y_fh, y_fc
 
-    x_train, ys_train, yh_train, yc_train = to_tensor(train)
-    x_val, ys_val, yh_val, yc_val = to_tensor(val)
+    x_train, ys_train, yh_train, yc_train = to_tensor(train_projected)
+    x_val, ys_val, yh_val, yc_val = to_tensor(val_projected)
 
     state_counts = [sum(1 for w in train if w["current_state"] == cls_name) for cls_name in classes]
     state_weights = [1.0 / math.sqrt(max(1, c)) for c in state_counts]
@@ -289,6 +344,7 @@ def _torch_train(
             "horizon_frames": cfg.horizon_frames,
             "input_dim": int(x_train.shape[2]),
             "hidden_dim": cfg.hidden_dim,
+            "frame_feature_indices": frame_feature_indices,
             "backend": "torch",
             "train_config": {
                 "window_size": cfg.window_size,
@@ -304,6 +360,21 @@ def _torch_train(
     )
     save_json(target / "deep_metrics.json", metrics)
     return metrics
+
+
+def train_deep_on_windows(
+    train_windows: list[SequenceWindow],
+    eval_windows: list[SequenceWindow],
+    output_dir: str,
+    cfg: DeepTrainConfig,
+    frame_feature_indices: list[int] | None = None,
+) -> dict[str, Any]:
+    """Train the deep baseline on explicit train/eval splits."""
+    if not train_windows or not eval_windows:
+        raise ValueError("Insufficient windows for train/eval split")
+    if torch is None:
+        return _train_fallback(train_windows, eval_windows, output_dir, cfg, frame_feature_indices)
+    return _torch_train(train_windows, eval_windows, output_dir, cfg, frame_feature_indices)
 
 
 def train_deep(
@@ -334,11 +405,7 @@ def train_deep(
         horizon_frames=cfg.horizon_frames
     )
     train, val = split_train_val(windows)
-    if not train or not val:
-        raise ValueError("Insufficient windows for train/validation split")
-    if torch is None:
-        return _train_fallback(train, val, output_dir, cfg)
-    return _torch_train(train, val, output_dir, cfg)
+    return train_deep_on_windows(train, val, output_dir, cfg)
 
 
 def _load_fallback_runtime(model_path: str | Path) -> tuple[dict[str, Any], StandardScaler, FallbackDeepModel]:
@@ -389,9 +456,19 @@ def _load_deep_windows_for_model(input_path: str, model_path: str | Path) -> lis
 
 def infer_sequence_deep(input_path: str, model_path: str) -> list[dict[str, Any]]:
     """Run deep current-state and near-future risk inference with probabilities."""
+    windows = _load_deep_windows_for_model(input_path, model_path)
+    return infer_sequence_deep_windows(windows, model_path)
+
+
+def infer_sequence_deep_windows(
+    windows: list[SequenceWindow],
+    model_path: str | Path,
+) -> list[dict[str, Any]]:
+    """Run deep inference over an explicit evaluation split."""
     if str(model_path).endswith(".pt") and torch is not None:
         ckpt = torch.load(model_path, map_location="cpu")
         classes = ckpt["classes"]
+        frame_feature_indices = ckpt.get("frame_feature_indices")
         model = TorchGRUMultiHead(
             input_dim=ckpt["input_dim"],
             hidden_dim=ckpt["hidden_dim"],
@@ -399,8 +476,8 @@ def infer_sequence_deep(input_path: str, model_path: str) -> list[dict[str, Any]
         )
         model.load_state_dict(ckpt["state_dict"])
         model.eval()
-        windows = _load_deep_windows_for_model(input_path, model_path)
-        x = torch.tensor([w["sequence"] for w in windows], dtype=torch.float32)
+        projected = _project_windows(windows, frame_feature_indices)
+        x = torch.tensor([w["sequence"] for w in projected], dtype=torch.float32)
         with torch.no_grad():
             s_logit, h_logit, c_logit = model(x)
             s_prob = torch.softmax(s_logit, dim=1).tolist()
@@ -422,8 +499,8 @@ def infer_sequence_deep(input_path: str, model_path: str) -> list[dict[str, Any]
         return records
 
     payload, scaler, model = _load_fallback_runtime(model_path)
-    windows = _load_deep_windows_for_model(input_path, model_path)
-    x = scaler.transform([_flatten_sequence(w["sequence"]) for w in windows])
+    projected = _project_windows(windows, payload.get("frame_feature_indices"))
+    x = scaler.transform([_flatten_sequence(w["sequence"]) for w in projected])
     s_probs = model.predict_state_proba(x)
     s_pred = model.predict_state(x)
     h_probs, c_probs = model.predict_future(x)
@@ -492,7 +569,7 @@ def evaluate_deep_calibrated(
 
     windows = _load_deep_windows_for_model(input_path, model_path)
     _, val = split_train_val(windows)
-    all_preds = infer_sequence_deep(input_path, model_path)
+    all_preds = infer_sequence_deep_windows(val, model_path)
     lookup = {(r["session_id"], r["end_frame_idx"]): r for r in all_preds}
 
     y_state: list[str] = []
@@ -510,13 +587,54 @@ def evaluate_deep_calibrated(
         p_h.append(float(rec["future_hesitation_within_horizon"]))
         p_c.append(float(rec["future_correction_within_horizon"]))
 
-    classes = sorted({w["current_state"] for w in windows})
+    classes = _label_space(
+        [w["current_state"] for w in windows],
+        y_state_pred,
+    )
     return {
         "current_state_deep": multiclass_metrics(y_state, y_state_pred, classes),
         "future_hesitation": binary_metrics(y_h, p_h, threshold=t_h),
         "future_correction": binary_metrics(y_c, p_c, threshold=t_c),
         "thresholds": {"future_hesitation": t_h, "future_correction": t_c},
         "windows": len(val),
+    }
+
+
+def evaluate_deep_windows(
+    windows: list[SequenceWindow],
+    model_path: str,
+    thresholds: ThresholdConfig | None = None,
+) -> dict[str, Any]:
+    """Evaluate a deep model against an explicit evaluation split."""
+    threshold_cfg = thresholds or ThresholdConfig()
+    predictions = infer_sequence_deep_windows(windows, model_path)
+    lookup = {(r["session_id"], r["end_frame_idx"]): r for r in predictions}
+
+    y_state: list[str] = []
+    y_state_pred: list[str] = []
+    y_h: list[int] = []
+    y_c: list[int] = []
+    p_h: list[float] = []
+    p_c: list[float] = []
+    for window in windows:
+        rec = lookup[(window["session_id"], window["end_frame_idx"])]
+        y_state.append(window["current_state"])
+        y_state_pred.append(str(rec["predicted_state"]))
+        y_h.append(int(window["future_hesitation"]))
+        y_c.append(int(window["future_correction"]))
+        p_h.append(float(rec["future_hesitation_within_horizon"]))
+        p_c.append(float(rec["future_correction_within_horizon"]))
+
+    classes = _label_space(y_state, y_state_pred)
+    return {
+        "current_state_deep": multiclass_metrics(y_state, y_state_pred, classes),
+        "future_hesitation": binary_metrics(y_h, p_h, threshold=threshold_cfg.future_hesitation),
+        "future_correction": binary_metrics(y_c, p_c, threshold=threshold_cfg.future_correction),
+        "thresholds": {
+            "future_hesitation": threshold_cfg.future_hesitation,
+            "future_correction": threshold_cfg.future_correction,
+        },
+        "windows": len(windows),
     }
 
 

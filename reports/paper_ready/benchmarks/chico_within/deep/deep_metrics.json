@@ -1,0 +1,130 @@
+{
+  "backend": "torch",
+  "current_state_deep": {
+    "accuracy": 1.0,
+    "macro_f1": 0.3333333333333333,
+    "per_class": {
+      "correction_rework": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "mild_hesitation": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "normal_progress": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    },
+    "confusion_matrix": {
+      "correction_rework": {
+        "correction_rework": 0,
+        "mild_hesitation": 0,
+        "normal_progress": 0
+      },
+      "mild_hesitation": {
+        "correction_rework": 0,
+        "mild_hesitation": 0,
+        "normal_progress": 0
+      },
+      "normal_progress": {
+        "correction_rework": 0,
+        "mild_hesitation": 0,
+        "normal_progress": 15
+      }
+    }
+  },
+  "current_state_rules": {
+    "accuracy": 0.0,
+    "macro_f1": 0.0,
+    "per_class": {
+      "correction_rework": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "mild_hesitation": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "normal_progress": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "confusion_matrix": {
+      "correction_rework": {
+        "correction_rework": 0,
+        "mild_hesitation": 0,
+        "normal_progress": 0
+      },
+      "mild_hesitation": {
+        "correction_rework": 0,
+        "mild_hesitation": 0,
+        "normal_progress": 0
+      },
+      "normal_progress": {
+        "correction_rework": 0,
+        "mild_hesitation": 0,
+        "normal_progress": 0
+      }
+    }
+  },
+  "future_hesitation": {
+    "accuracy": 0.0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "auroc": 0.0,
+    "auprc": 0.0,
+    "brier": 0.28658121639358286,
+    "ece": 0.5353233734766643,
+    "confusion": {
+      "tp": 0,
+      "tn": 0,
+      "fp": 15,
+      "fn": 0
+    },
+    "threshold": 0.5
+  },
+  "future_correction": {
+    "accuracy": 0.0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "auroc": 0.0,
+    "auprc": 0.0,
+    "brier": 0.2800103755137897,
+    "ece": 0.5291448593139648,
+    "confusion": {
+      "tp": 0,
+      "tn": 0,
+      "fp": 15,
+      "fn": 0
+    },
+    "threshold": 0.5
+  },
+  "counts": {
+    "train_windows": 45,
+    "val_windows": 15
+  },
+  "imbalance": {
+    "state_class_weights": [
+      0.5773502691896258,
+      0.5,
+      0.16222142113076254
+    ],
+    "future_hes_pos_weight": 10.25,
+    "future_corr_pos_weight": 5.4285712242126465
+  },
+  "loss_history": [
+    3.3756254514058432,
+    3.375956932703654
+  ]
+}

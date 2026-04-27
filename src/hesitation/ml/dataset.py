@@ -59,6 +59,7 @@ def build_windows(
             windows.append(
                 {
                     "session_id": session_id,
+                    "dataset_name": str(session_rows[end - 1].get("dataset_name", "unknown")),
                     "end_frame_idx": observations[end - 1].frame_idx,
                     "features": [float(getattr(feature, name)) for name in FEATURE_ORDER],
                     "current_state": current_state,
