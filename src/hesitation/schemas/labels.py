@@ -1,5 +1,15 @@
 from dataclasses import dataclass, field
-from enum import StrEnum
+from enum import Enum
+
+# StrEnum compatibility for Python < 3.11
+try:
+    from enum import StrEnum
+except ImportError:
+    # Fallback for Python < 3.11
+    class StrEnum(str, Enum):
+        """String Enum for Python < 3.11 compatibility"""
+        def __str__(self):
+            return str(self.value)
 
 
 class HesitationState(StrEnum):
