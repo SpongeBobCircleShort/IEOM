@@ -1,0 +1,38 @@
+{
+  "dataset_name": "chico",
+  "version": "v1",
+  "fps_default": 30,
+  "fields": {
+    "session_id": {"source": ["session_id", "session", "video_id"], "required": true, "unit": null, "notes": "Session-level identifier"},
+    "sequence_id": {"source": ["sequence_id", "sequence"], "required": false, "unit": null, "notes": "Optional sequence segment"},
+    "subject_id": {"source": ["subject_id", "worker_id"], "required": false, "unit": null, "notes": "Optional subject id"},
+    "record_id": {"source": ["record_id", "frame_uid"], "required": false, "unit": null, "notes": "Raw record identifier"},
+    "frame_index": {"source": ["frame_index", "frame_id", "frame"], "required": true, "unit": "index", "notes": "Frame number"},
+    "timestamp": {"source": ["timestamp_ms", "timestamp", "time"], "required": false, "unit": "ms_or_s", "notes": "If small values, interpreted as seconds and converted to ms"},
+    "left_x": {"source": ["left_hand_x", "l_wrist_x", "hand_lx"], "required": true, "unit": "px_or_norm", "notes": "Left hand x"},
+    "left_y": {"source": ["left_hand_y", "l_wrist_y", "hand_ly"], "required": true, "unit": "px_or_norm", "notes": "Left hand y"},
+    "right_x": {"source": ["right_hand_x", "r_wrist_x", "hand_rx"], "required": false, "unit": "px_or_norm", "notes": "Right hand x"},
+    "right_y": {"source": ["right_hand_y", "r_wrist_y", "hand_ry"], "required": false, "unit": "px_or_norm", "notes": "Right hand y"},
+    "pose_confidence": {"source": ["pose_confidence", "confidence"], "required": false, "unit": "0_1", "notes": "Pose confidence"},
+    "task_name": {"source": ["task_name", "task"], "required": false, "unit": null, "notes": "Task"},
+    "task_step": {"source": ["task_step", "step"], "required": false, "unit": null, "notes": "Task step"},
+    "action_label": {"source": ["action_label", "action", "activity"], "required": false, "unit": null, "notes": "Raw action label"},
+    "human_robot_distance": {"source": ["human_robot_distance", "hr_distance"], "required": false, "unit": "m", "notes": "Human-robot distance"},
+    "shared_workspace_flag": {"source": ["shared_workspace_flag", "in_shared_zone"], "required": false, "unit": "bool", "notes": "Shared region occupancy"},
+    "rework_native_flag": {"source": ["rework_native_flag", "is_rework"], "required": false, "unit": "bool", "notes": "Native rework marker"},
+    "overlap_event_native": {"source": ["overlap_event_native", "overlap_event"], "required": false, "unit": "bool", "notes": "Native overlap marker"},
+    "collision_event_native": {"source": ["collision_event_native", "collision_event"], "required": false, "unit": "bool", "notes": "Native collision marker"},
+    "annotation_reference": {"source": ["annotation_reference", "annotation_ref"], "required": false, "unit": null, "notes": "Raw annotation source reference"}
+  },
+  "action_map": {
+    "reach": "reach",
+    "pick": "pick",
+    "grasp": "pick",
+    "align": "align",
+    "insert": "assemble",
+    "place": "place",
+    "idle": "wait",
+    "wait": "wait",
+    "rework": "rework"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "ambiguous",
+  "n_steps": 7,
+  "step_duration_mean_s": 4.5,
+  "step_duration_std_s": 1.0,
+  "mild_hesitation_prob": 0.25,
+  "strong_hesitation_prob": 0.12,
+  "correction_rework_prob": 0.14,
+  "overlap_risk_prob": 0.10,
+  "ready_for_robot_action_prob": 0.16,
+  "ambiguous_transition_prob": 0.25,
+  "domain_gap_scale": 1.0,
+  "correction_burst_prob": 0.15,
+  "noise": {
+    "position_jitter_std": 0.015,
+    "dropout_prob": 0.02
+  }
+}
