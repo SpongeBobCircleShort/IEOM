@@ -1,0 +1,18 @@
+{
+  "name": "correction_heavy",
+  "n_steps": 8,
+  "step_duration_mean_s": 5.0,
+  "step_duration_std_s": 1.1,
+  "mild_hesitation_prob": 0.2,
+  "strong_hesitation_prob": 0.1,
+  "correction_rework_prob": 0.3,
+  "overlap_risk_prob": 0.08,
+  "ready_for_robot_action_prob": 0.1,
+  "ambiguous_transition_prob": 0.1,
+  "domain_gap_scale": 1.1,
+  "correction_burst_prob": 0.35,
+  "noise": {
+    "position_jitter_std": 0.02,
+    "dropout_prob": 0.03
+  }
+}

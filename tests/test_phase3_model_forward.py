@@ -1,22 +1,17 @@
-import pytest
+import importlib.util
 
 
-pytestmark = pytest.mark.deep
+def test_torch_model_forward_if_available() -> None:
+    if importlib.util.find_spec("torch") is None:
+        return
 
+    import torch
 
-def test_phase3_model_forward_shapes() -> None:
-    torch = pytest.importorskip("torch")
+    from hesitation.deep.model import TorchGRUMultiHead
 
-    from hesitation.ml.deep import GRURiskModel, STATE_CLASSES, SEQUENCE_FEATURE_ORDER
-
-    model = GRURiskModel(
-        input_size=len(SEQUENCE_FEATURE_ORDER),
-        hidden_size=16,
-        state_dim=len(STATE_CLASSES),
-    )
-    batch = torch.randn(4, 12, len(SEQUENCE_FEATURE_ORDER))
-    outputs = model(batch)
-
-    assert outputs["state_logits"].shape == (4, len(STATE_CLASSES))
-    assert outputs["future_hesitation_logits"].shape == (4,)
-    assert outputs["future_correction_logits"].shape == (4,)
+    model = TorchGRUMultiHead(input_dim=8, hidden_dim=16, n_state_classes=6)
+    x = torch.zeros((3, 20, 8), dtype=torch.float32)
+    state, fh, fc = model(x)
+    assert state.shape == (3, 6)
+    assert fh.shape == (3, 1)
+    assert fc.shape == (3, 1)
