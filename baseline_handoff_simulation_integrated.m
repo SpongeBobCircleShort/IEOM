@@ -13,6 +13,9 @@ function baseline_handoff_simulation_integrated()
     ieom_model_root = '/Users/adijain/ENGINEERING/IEOM/ieom_model';
     experiment_output_dir = '/tmp/ieom_experiments';
     
+    % Add MATLAB path
+    addpath(fullfile(ieom_model_root, 'src', 'matlab'));
+    
     if ~isdir(experiment_output_dir)
         mkdir(experiment_output_dir);
     end
