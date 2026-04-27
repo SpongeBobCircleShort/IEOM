@@ -1,0 +1,60 @@
+{
+  "all_passed": true,
+  "scenario_count": 3,
+  "rows": [
+    {
+      "scenario": "normal_progress_like",
+      "features": {
+        "mean_hand_speed": 0.55,
+        "pause_ratio": 0.08,
+        "progress_delta": 0.82,
+        "reversal_count": 0,
+        "retry_count": 0,
+        "task_step_id": 2,
+        "human_robot_distance": 0.75
+      },
+      "state": "normal_progress",
+      "confidence": 0.16666666666666666,
+      "future_hesitation_prob": 0.0,
+      "future_correction_prob": 0.0,
+      "deterministic": true,
+      "issues": []
+    },
+    {
+      "scenario": "hesitation_like",
+      "features": {
+        "mean_hand_speed": 0.07,
+        "pause_ratio": 0.72,
+        "progress_delta": 0.18,
+        "reversal_count": 2,
+        "retry_count": 1,
+        "task_step_id": 4,
+        "human_robot_distance": 0.33
+      },
+      "state": "normal_progress",
+      "confidence": 0.16666666666666666,
+      "future_hesitation_prob": 0.0,
+      "future_correction_prob": 0.0,
+      "deterministic": true,
+      "issues": []
+    },
+    {
+      "scenario": "overlap_risk_like",
+      "features": {
+        "mean_hand_speed": 0.3,
+        "pause_ratio": 0.2,
+        "progress_delta": 0.48,
+        "reversal_count": 1,
+        "retry_count": 0,
+        "task_step_id": 5,
+        "human_robot_distance": 0.12
+      },
+      "state": "normal_progress",
+      "confidence": 0.16666666666666666,
+      "future_hesitation_prob": 0.0,
+      "future_correction_prob": 0.0,
+      "deterministic": true,
+      "issues": []
+    }
+  ]
+}
