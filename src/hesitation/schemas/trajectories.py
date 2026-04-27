@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from hesitation.schemas.events import FrameObservation
 
 
-@dataclass(slots=True)
+@dataclass
 class SessionTrajectory:
     session_id: str
     frame_rate_hz: int

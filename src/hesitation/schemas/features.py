@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 
-@dataclass(slots=True)
+@dataclass
 class FeatureWindow:
     session_id: str
     end_frame_idx: int

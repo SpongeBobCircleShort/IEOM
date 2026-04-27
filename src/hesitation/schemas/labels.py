@@ -11,7 +11,7 @@ class HesitationState(str, Enum):
     OVERLAP_RISK = "overlap_risk"
 
 
-@dataclass(slots=True)
+@dataclass
 class LabelOutput:
     current_state: HesitationState
     hesitation_risk: float

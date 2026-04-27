@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 
-@dataclass(slots=True)
+@dataclass
 class FrameObservation:
     session_id: str
     frame_idx: int
