@@ -10,7 +10,7 @@ class StandardScaler:
     stds: list[float]
 
     @classmethod
-    def fit(cls, features: list[list[float]]) -> "StandardScaler":
+    def fit(cls, features: list[list[float]]) -> StandardScaler:
         n_features = len(features[0]) if features else 0
         means: list[float] = []
         stds: list[float] = []
@@ -26,7 +26,14 @@ class StandardScaler:
     def transform(self, features: list[list[float]]) -> list[list[float]]:
         transformed: list[list[float]] = []
         for row in features:
-            transformed.append([(v - m) / s for v, m, s in zip(row, self.means, self.stds)])
+            transformed.append(
+                [(v - m) / s for v,
+                m,
+                s in zip(row,
+                self.means,
+                self.stds,
+                strict=False)]
+            )
         return transformed
 
 
@@ -44,8 +51,8 @@ class BinaryLogisticRegression:
 
     def fit(self, x: list[list[float]], y: list[int], epochs: int = 80) -> None:
         for _ in range(epochs):
-            for row, target in zip(x, y):
-                logit = sum(w * v for w, v in zip(self.weights, row)) + self.bias
+            for row, target in zip(x, y, strict=False):
+                logit = sum(w * v for w, v in zip(self.weights, row, strict=False)) + self.bias
                 pred = self._sigmoid(logit)
                 err = pred - float(target)
                 for i in range(len(self.weights)):
@@ -56,7 +63,7 @@ class BinaryLogisticRegression:
     def predict_proba(self, x: list[list[float]]) -> list[float]:
         out: list[float] = []
         for row in x:
-            logit = sum(w * v for w, v in zip(self.weights, row)) + self.bias
+            logit = sum(w * v for w, v in zip(self.weights, row, strict=False)) + self.bias
             out.append(self._sigmoid(logit))
         return out
 

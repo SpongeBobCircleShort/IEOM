@@ -6,11 +6,10 @@ This can be used independently for MATLAB integration or testing.
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
-
-import sys
 
 # Try to import torch model, fall back to logistic if unavailable
 try:
@@ -168,7 +167,12 @@ class HesitationPredictor:
             "overlap_risk",
         ]
 
-        state_probs = {name: float(prob) for name, prob in zip(state_names, state_probs_raw)}
+        state_probs = {name: float(
+            prob) for name,
+            prob in zip(state_names,
+            state_probs_raw,
+            strict=False
+        )}
         predicted_state = state_names[state_probs_raw.argmax()]
         confidence = float(state_probs_raw.max())
 

@@ -62,7 +62,12 @@ def generate_session(
     y = 0.0
 
     correction_burst = rng.random() < scenario.correction_burst_prob
-    burst_start = rng.randint(max(1, total_frames // 4), max(2, (3 * total_frames) // 4)) if total_frames > 4 else 0
+    burst_start = rng.randint(
+        max(1,
+        total_frames // 4),
+        max(2,
+        (3 * total_frames) // 4)
+    ) if total_frames > 4 else 0
     burst_len = max(2, total_frames // 12)
 
     for frame_idx in range(total_frames):
@@ -109,4 +114,8 @@ def generate_session(
             )
         )
 
-    return SessionTrajectory(session_id=session_id, frame_rate_hz=frame_rate_hz, frames=frames), latent
+    return SessionTrajectory(
+        session_id=session_id,
+        frame_rate_hz=frame_rate_hz,
+        frames=frames
+    ), latent

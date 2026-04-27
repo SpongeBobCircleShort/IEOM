@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 
-class HesitationState(str, Enum):
+class HesitationState(StrEnum):
     NORMAL_PROGRESS = "normal_progress"
     MILD_HESITATION = "mild_hesitation"
     STRONG_HESITATION = "strong_hesitation"

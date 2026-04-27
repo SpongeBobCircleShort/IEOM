@@ -17,7 +17,12 @@ def _dataset_stats(model_input_path: str, window_size: int, horizon_frames: int)
         state = str(row.get("latent_state", "unknown"))
         labels[state] = labels.get(state, 0) + 1
 
-    windows = build_windows(rows, window_size=window_size, pause_speed_threshold=0.03, horizon_frames=horizon_frames)
+    windows = build_windows(
+        rows,
+        window_size=window_size,
+        pause_speed_threshold=0.03,
+        horizon_frames=horizon_frames
+    )
     train, val = split_train_val(windows)
     return {
         "records": len(rows),

@@ -6,11 +6,9 @@ from typing import Any
 
 from hesitation.baselines.rules_engine import classify_window
 from hesitation.evaluation.metrics import binary_metrics, multiclass_metrics
-from hesitation.features.pipeline import window_to_features
 from hesitation.io.config import load_config
 from hesitation.ml.dataset import FEATURE_ORDER, build_windows, load_rows, split_train_val
 from hesitation.ml.logistic import BinaryLogisticRegression, OVRLogisticModel, StandardScaler
-from hesitation.schemas.events import FrameObservation
 from hesitation.schemas.features import FeatureWindow
 
 
@@ -68,11 +66,11 @@ def train_classical(
     fc_model.fit(x_train_std, y_fc_train)
 
     state_pred = state_model.predict(x_val_std)
-    state_probs = state_model.predict_proba(x_val_std)
+    state_model.predict_proba(x_val_std)
     fh_probs = fh_model.predict_proba(x_val_std)
-    fh_pred = [1 if p >= 0.5 else 0 for p in fh_probs]
+    [1 if p >= 0.5 else 0 for p in fh_probs]
     fc_probs = fc_model.predict_proba(x_val_std)
-    fc_pred = [1 if p >= 0.5 else 0 for p in fc_probs]
+    [1 if p >= 0.5 else 0 for p in fc_probs]
 
     rules_cfg = load_config("configs/baseline/rules_v1.yaml")
     rules_pred: list[str] = []
@@ -88,7 +86,11 @@ def train_classical(
             backtrack_ratio=float(w["features"][5]),
             mean_workspace_distance=float(w["features"][6]),
         )
-        rules_out = classify_window(f, thresholds=rules_cfg["thresholds"], risk_cfg=rules_cfg["risk"])
+        rules_out = classify_window(
+            f,
+            thresholds=rules_cfg["thresholds"],
+            risk_cfg=rules_cfg["risk"]
+        )
         rules_pred.append(rules_out.current_state.value)
 
     metrics = {
@@ -173,7 +175,11 @@ def evaluate_classical(input_path: str, model_path: str) -> dict[str, Any]:
     y_fc_probs = runtime["future_correction"].predict_proba(x_std)
 
     return {
-        "current_state_classical": multiclass_metrics(y_state, y_state_pred, runtime["state"].classes),
+        "current_state_classical": multiclass_metrics(
+            y_state,
+            y_state_pred,
+            runtime["state"].classes
+        ),
         "future_hesitation": binary_metrics(y_fh, y_fh_probs, threshold=0.5),
         "future_correction": binary_metrics(y_fc, y_fc_probs, threshold=0.5),
         "windows": len(val),
@@ -194,7 +200,7 @@ def infer_sequence(input_path: str, model_path: str) -> list[dict[str, Any]]:
     state_probs = runtime["state"].predict_proba(x)
     state_pred = runtime["state"].predict(x)
     out: list[dict[str, Any]] = []
-    for w, p, s in zip(windows, state_probs, state_pred):
+    for w, p, s in zip(windows, state_probs, state_pred, strict=False):
         out.append(
             {
                 "session_id": w["session_id"],
@@ -220,7 +226,7 @@ def predict_future_risk(input_path: str, model_path: str) -> list[dict[str, Any]
     fh = runtime["future_hesitation"].predict_proba(x)
     fc = runtime["future_correction"].predict_proba(x)
     out: list[dict[str, Any]] = []
-    for w, p_h, p_c in zip(windows, fh, fc):
+    for w, p_h, p_c in zip(windows, fh, fc, strict=False):
         out.append(
             {
                 "session_id": w["session_id"],

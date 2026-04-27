@@ -33,7 +33,11 @@ class PolicyRecommendation:
 
 
 def recommend_policy(inp: PolicyInput) -> PolicyRecommendation:
-    risk = max(inp.current_hesitation_probability, inp.future_hesitation_probability, inp.future_correction_probability)
+    risk = max(
+        inp.current_hesitation_probability,
+        inp.future_hesitation_probability,
+        inp.future_correction_probability
+    )
     overlap_sensitive = inp.workspace_distance < 0.25 or inp.inferred_current_state == HesitationState.OVERLAP_RISK.value
 
     if inp.inferred_current_state in {HesitationState.CORRECTION_REWORK.value, HesitationState.STRONG_HESITATION.value}:

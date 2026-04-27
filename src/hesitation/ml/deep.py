@@ -227,7 +227,12 @@ def _load_checkpoint(model_path: str | Path) -> dict[str, Any]:
     }
 
 
-def _prepare_eval_sequences(rows: list[DatasetRow], checkpoint: dict[str, Any], scaler: StandardScaler) -> dict[str, Any]:
+def _prepare_eval_sequences(
+    rows: list[DatasetRow],
+    checkpoint: dict[str,
+    Any],
+    scaler: StandardScaler
+) -> dict[str, Any]:
     windows = build_sequence_windows(
         rows,
         window_size=int(checkpoint["window_size"]),
@@ -256,8 +261,16 @@ def _evaluate_predictions(
     active_thresholds = thresholds or DEFAULT_THRESHOLDS
     return {
         "current_state_deep": multiclass_metrics(y_state, predictions["state_pred"], STATE_CLASSES),
-        "future_hesitation": binary_metrics(y_fh, predictions["future_hesitation"], active_thresholds["future_hesitation"]),
-        "future_correction": binary_metrics(y_fc, predictions["future_correction"], active_thresholds["future_correction"]),
+        "future_hesitation": binary_metrics(
+            y_fh,
+            predictions["future_hesitation"],
+            active_thresholds["future_hesitation"]
+        ),
+        "future_correction": binary_metrics(
+            y_fc,
+            predictions["future_correction"],
+            active_thresholds["future_correction"]
+        ),
         "thresholds": active_thresholds,
         "windows": len(y_state),
     }
@@ -277,7 +290,11 @@ def train_deep(
     _require_torch()
     torch.manual_seed(seed)
 
-    prepared = _prepare_datasets(load_rows(input_path), window_size=window_size, horizon_frames=horizon_frames)
+    prepared = _prepare_datasets(
+        load_rows(input_path),
+        window_size=window_size,
+        horizon_frames=horizon_frames
+    )
     x_train, y_state_train = _tensorize(prepared["train_sequences"], prepared["y_state_train"])
     y_fh_train = _tensorize_binary(prepared["y_fh_train"])
     y_fc_train = _tensorize_binary(prepared["y_fc_train"])
@@ -332,19 +349,40 @@ def train_deep(
     return metrics
 
 
-def evaluate_deep(input_path: str, model_path: str, output_path: str | None = None) -> dict[str, Any]:
+def evaluate_deep(
+    input_path: str,
+    model_path: str,
+    output_path: str | None = None
+) -> dict[str, Any]:
     runtime = _load_checkpoint(model_path)
-    prepared = _prepare_eval_sequences(load_rows(input_path), runtime["checkpoint"], runtime["scaler"])
+    prepared = _prepare_eval_sequences(
+        load_rows(input_path),
+        runtime["checkpoint"],
+        runtime["scaler"]
+    )
     predictions = _run_model(runtime["model"], prepared["sequences"])
-    metrics = _evaluate_predictions(predictions, prepared["y_state"], prepared["y_fh"], prepared["y_fc"])
+    metrics = _evaluate_predictions(
+        predictions,
+        prepared["y_state"],
+        prepared["y_fh"],
+        prepared["y_fc"]
+    )
     if output_path:
         _save_json(output_path, metrics)
     return metrics
 
 
-def tune_thresholds(input_path: str, model_path: str, output_path: str | None = None) -> dict[str, float]:
+def tune_thresholds(
+    input_path: str,
+    model_path: str,
+    output_path: str | None = None
+) -> dict[str, float]:
     runtime = _load_checkpoint(model_path)
-    prepared = _prepare_eval_sequences(load_rows(input_path), runtime["checkpoint"], runtime["scaler"])
+    prepared = _prepare_eval_sequences(
+        load_rows(input_path),
+        runtime["checkpoint"],
+        runtime["scaler"]
+    )
     predictions = _run_model(runtime["model"], prepared["sequences"])
     thresholds = {
         "future_hesitation": _fit_threshold(prepared["y_fh"], predictions["future_hesitation"]),
@@ -363,7 +401,11 @@ def evaluate_deep_calibrated(
 ) -> dict[str, Any]:
     runtime = _load_checkpoint(model_path)
     thresholds = json.loads(Path(threshold_path).read_text(encoding="utf-8"))
-    prepared = _prepare_eval_sequences(load_rows(input_path), runtime["checkpoint"], runtime["scaler"])
+    prepared = _prepare_eval_sequences(
+        load_rows(input_path),
+        runtime["checkpoint"],
+        runtime["scaler"]
+    )
     predictions = _run_model(runtime["model"], prepared["sequences"])
     metrics = _evaluate_predictions(
         predictions,

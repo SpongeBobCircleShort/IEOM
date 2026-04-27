@@ -25,10 +25,10 @@ def write_comparison_report(output_dir: str, report: dict[str, Any]) -> None:
         "",
         "| Metric | Rules | Classical | Deep |",
         "|---|---:|---:|---:|",
-        f"| Current-state accuracy | {summary['current_state_accuracy']['rules']:.4f} | {summary['current_state_accuracy']['classical']:.4f} | {summary['current_state_accuracy']['deep']:.4f} |",
-        f"| Current-state macro F1 | {summary['current_state_macro_f1']['rules']:.4f} | {summary['current_state_macro_f1']['classical']:.4f} | {summary['current_state_macro_f1']['deep']:.4f} |",
-        f"| Future hesitation AUPRC | n/a | {summary['future_hesitation_auprc']['classical']:.4f} | {summary['future_hesitation_auprc']['deep']:.4f} |",
-        f"| Future correction AUPRC | n/a | {summary['future_correction_auprc']['classical']:.4f} | {summary['future_correction_auprc']['deep']:.4f} |",
+        f"| Current-state accuracy | {summary['current_state_accuracy']['rules']:.4f} | {summary['current_state_accuracy']['classical']:.4f} | {summary['current_state_accuracy']['deep']:.4f} |",  # noqa: E501
+        f"| Current-state macro F1 | {summary['current_state_macro_f1']['rules']:.4f} | {summary['current_state_macro_f1']['classical']:.4f} | {summary['current_state_macro_f1']['deep']:.4f} |",  # noqa: E501
+        f"| Future hesitation AUPRC | n/a | {summary['future_hesitation_auprc']['classical']:.4f} | {summary['future_hesitation_auprc']['deep']:.4f} |",  # noqa: E501
+        f"| Future correction AUPRC | n/a | {summary['future_correction_auprc']['classical']:.4f} | {summary['future_correction_auprc']['deep']:.4f} |",  # noqa: E501
     ]
     (out / "comparison_report.md").write_text("\n".join(lines), encoding="utf-8")
 

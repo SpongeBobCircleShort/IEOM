@@ -16,7 +16,12 @@ from hesitation.database.schemas import CanonicalRecord
 from hesitation.io.writers import write_jsonl
 
 
-def normalize_chico(raw_path: str, mapping_config: str, output_path: str, report_path: str) -> tuple[str, str]:
+def normalize_chico(
+    raw_path: str,
+    mapping_config: str,
+    output_path: str,
+    report_path: str
+) -> tuple[str, str]:
     pack = load_chico_mapping_pack(mapping_config)
     adapter = CHICOAdapter(pack)
     records, report = adapter.normalize(raw_path)

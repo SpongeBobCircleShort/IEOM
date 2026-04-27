@@ -10,7 +10,12 @@ from statistics import fmean
 from typing import Any
 
 from hesitation.baselines.rules_engine import classify_window
-from hesitation.deep.dataset import SequenceWindow, build_sequence_windows, load_rows, split_train_val
+from hesitation.deep.dataset import (
+    SequenceWindow,
+    build_sequence_windows,
+    load_rows,
+    split_train_val,
+)
 from hesitation.deep.model import FallbackDeepModel, TorchGRUMultiHead, torch
 from hesitation.deep.serialize import load_json, save_json
 from hesitation.evaluation.metrics import binary_metrics, multiclass_metrics
@@ -48,7 +53,11 @@ def _flatten_sequence(seq: list[list[float]]) -> list[float]:
     return [value for row in seq for value in row]
 
 
-def _fit_ovr(features: list[list[float]], labels: list[str], classes: list[str]) -> OVRLogisticModel:
+def _fit_ovr(
+    features: list[list[float]],
+    labels: list[str],
+    classes: list[str]
+) -> OVRLogisticModel:
     models: dict[str, BinaryLogisticRegression] = {}
     for cls_name in classes:
         y = [1 if label == cls_name else 0 for label in labels]
@@ -210,7 +219,11 @@ def _torch_train(
     pos_w_h = torch.tensor([_compute_pos_weight([w["future_hesitation"] for w in train])], dtype=torch.float32)
     pos_w_c = torch.tensor([_compute_pos_weight([w["future_correction"] for w in train])], dtype=torch.float32)
 
-    model = TorchGRUMultiHead(input_dim=x_train.shape[2], hidden_dim=cfg.hidden_dim, n_state_classes=len(classes))
+    model = TorchGRUMultiHead(
+        input_dim=x_train.shape[2],
+        hidden_dim=cfg.hidden_dim,
+        n_state_classes=len(classes)
+    )
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.learning_rate)
     ce = torch.nn.CrossEntropyLoss(weight=state_weights_tensor)
     bce_h = torch.nn.BCEWithLogitsLoss(pos_weight=pos_w_h)
@@ -315,7 +328,11 @@ def train_deep(
         batch_size=batch_size,
     )
     rows = load_rows(input_path)
-    windows = build_sequence_windows(rows, window_size=cfg.window_size, horizon_frames=cfg.horizon_frames)
+    windows = build_sequence_windows(
+        rows,
+        window_size=cfg.window_size,
+        horizon_frames=cfg.horizon_frames
+    )
     train, val = split_train_val(windows)
     if not train or not val:
         raise ValueError("Insufficient windows for train/validation split")
@@ -345,16 +362,29 @@ def _load_fallback_runtime(model_path: str | Path) -> tuple[dict[str, Any], Stan
     fc.weights = [float(v) for v in payload["future_correction"]["weights"]]
     fc.bias = float(payload["future_correction"]["bias"])
 
-    return payload, scaler, FallbackDeepModel(classes=classes, state_model=state, future_hes_model=fh, future_corr_model=fc)
+    return payload, scaler, FallbackDeepModel(
+        classes=classes,
+        state_model=state,
+        future_hes_model=fh,
+        future_corr_model=fc
+    )
 
 
 def _load_deep_windows_for_model(input_path: str, model_path: str | Path) -> list[SequenceWindow]:
     rows = load_rows(input_path)
     if str(model_path).endswith(".pt") and torch is not None:
         ckpt = torch.load(model_path, map_location="cpu")
-        return build_sequence_windows(rows, window_size=int(ckpt["window_size"]), horizon_frames=int(ckpt["horizon_frames"]))
+        return build_sequence_windows(
+            rows,
+            window_size=int(ckpt["window_size"]),
+            horizon_frames=int(ckpt["horizon_frames"])
+        )
     payload = load_json(model_path)
-    return build_sequence_windows(rows, window_size=int(payload["window_size"]), horizon_frames=int(payload["horizon_frames"]))
+    return build_sequence_windows(
+        rows,
+        window_size=int(payload["window_size"]),
+        horizon_frames=int(payload["horizon_frames"])
+    )
 
 
 def infer_sequence_deep(input_path: str, model_path: str) -> list[dict[str, Any]]:
@@ -362,7 +392,11 @@ def infer_sequence_deep(input_path: str, model_path: str) -> list[dict[str, Any]
     if str(model_path).endswith(".pt") and torch is not None:
         ckpt = torch.load(model_path, map_location="cpu")
         classes = ckpt["classes"]
-        model = TorchGRUMultiHead(input_dim=ckpt["input_dim"], hidden_dim=ckpt["hidden_dim"], n_state_classes=len(classes))
+        model = TorchGRUMultiHead(
+            input_dim=ckpt["input_dim"],
+            hidden_dim=ckpt["hidden_dim"],
+            n_state_classes=len(classes)
+        )
         model.load_state_dict(ckpt["state_dict"])
         model.eval()
         windows = _load_deep_windows_for_model(input_path, model_path)
@@ -373,7 +407,7 @@ def infer_sequence_deep(input_path: str, model_path: str) -> list[dict[str, Any]
             h_prob = torch.sigmoid(h_logit).squeeze(1).tolist()
             c_prob = torch.sigmoid(c_logit).squeeze(1).tolist()
         records: list[dict[str, Any]] = []
-        for w, sp, hp, cp in zip(windows, s_prob, h_prob, c_prob):
+        for w, sp, hp, cp in zip(windows, s_prob, h_prob, c_prob, strict=False):
             probs = {classes[i]: float(sp[i]) for i in range(len(classes))}
             records.append(
                 {
@@ -395,7 +429,7 @@ def infer_sequence_deep(input_path: str, model_path: str) -> list[dict[str, Any]
     h_probs, c_probs = model.predict_future(x)
 
     records: list[dict[str, Any]] = []
-    for w, sp, ss, hp, cp in zip(windows, s_probs, s_pred, h_probs, c_probs):
+    for w, sp, ss, hp, cp in zip(windows, s_probs, s_pred, h_probs, c_probs, strict=False):
         records.append(
             {
                 "session_id": w["session_id"],
@@ -446,7 +480,11 @@ def tune_thresholds(input_path: str, model_path: str, output_path: str) -> dict[
     return tuned
 
 
-def evaluate_deep_calibrated(input_path: str, model_path: str, threshold_path: str) -> dict[str, Any]:
+def evaluate_deep_calibrated(
+    input_path: str,
+    model_path: str,
+    threshold_path: str
+) -> dict[str, Any]:
     """Evaluate deep model using externally tuned thresholds."""
     thresholds = load_json(threshold_path)
     t_h = float(thresholds.get("future_hesitation", 0.5))
@@ -532,7 +570,12 @@ def train_deep_multiseed(
     return aggregate
 
 
-def compare_models(input_path: str, classical_model_path: str, deep_model_path: str, output_dir: str) -> dict[str, Any]:
+def compare_models(
+    input_path: str,
+    classical_model_path: str,
+    deep_model_path: str,
+    output_dir: str
+) -> dict[str, Any]:
     """Compare rules, classical, and deep models and emit report files."""
     classical = evaluate_classical(input_path, classical_model_path)
     deep = evaluate_deep(input_path, deep_model_path)

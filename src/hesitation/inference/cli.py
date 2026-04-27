@@ -17,7 +17,6 @@ Usage:
 import argparse
 import json
 import sys
-from pathlib import Path
 
 from hesitation.inference import HesitationPredictor
 
@@ -91,7 +90,11 @@ def main() -> int:
                 print(prediction.to_json())
             elif args.format == "csv":
                 # CSV: state,confidence,future_hesitation,future_correction
-                row = f"{prediction.state},{prediction.confidence:.3f},{prediction.future_hesitation_prob:.3f},{prediction.future_correction_prob:.3f}"
+                row = (  # noqa: E501
+                    f"{prediction.state},{prediction.confidence:.3f},"
+                    f"{prediction.future_hesitation_prob:.3f},"
+                    f"{prediction.future_correction_prob:.3f}"
+                )
                 print(row)
             elif args.format == "text":
                 print(f"State: {prediction.state}")

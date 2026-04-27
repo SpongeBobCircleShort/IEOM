@@ -21,7 +21,11 @@ def derive_hesitation_labels(records: list[CanonicalRecord], horizon_frames: int
                 record.micro_stop_count = (record.micro_stop_count or 0) + 1
             if idx > 0:
                 prev = session_rows[idx - 1]
-                prev_dx = (prev.hand_left or [0.0, 0.0])[0] - (session_rows[idx - 2].hand_left or [0.0, 0.0])[0] if idx > 1 else 0.0
+                prev_dx = (
+                    prev.hand_left or [0.0,
+                    0.0])[0] - (session_rows[idx - 2].hand_left or [0.0,
+                    0.0]
+                )[0] if idx > 1 else 0.0
                 dx = (record.hand_left or [0.0, 0.0])[0] - (prev.hand_left or [0.0, 0.0])[0]
                 if prev_dx * dx < 0:
                     record.motion_reversal_count = (record.motion_reversal_count or 0) + 1

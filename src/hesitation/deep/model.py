@@ -14,7 +14,6 @@ except Exception:  # pragma: no cover - optional runtime dependency
 
 from hesitation.ml.logistic import BinaryLogisticRegression, OVRLogisticModel
 
-
 if nn is not None:
 
     class TorchGRUMultiHead(nn.Module):
