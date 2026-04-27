@@ -1,10 +1,11 @@
 import json
 import subprocess
+import sys
 
 
 def test_cli_normalize_smoke(tmp_path) -> None:
     cmd = [
-        "python",
+        sys.executable,
         "scripts/real_dataset_onboarding.py",
         "normalize-chico",
         "--raw",

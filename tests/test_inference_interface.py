@@ -15,7 +15,9 @@ def test_prediction_dataclass():
     )
     assert pred.state == "normal_progress"
     assert pred.to_json() is not None
-    assert "normal_progress" in pred.to_dict()
+    payload = pred.to_dict()
+    assert payload["state"] == "normal_progress"
+    assert payload["state_probabilities"]["normal_progress"] == 1.0
 
 
 def test_predictor_initialization():
