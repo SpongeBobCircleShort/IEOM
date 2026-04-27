@@ -28,7 +28,7 @@ def test_end_to_end_real_onboarding_smoke(tmp_path) -> None:
     run_qc_report(str(labeled), str(qc), "chico")
 
     splits = tmp_path / "splits.json"
-    build_splits(str(labeled), str(splits))
+    build_splits(str(labeled), str(splits), "chico")
 
     model_input = tmp_path / "model_input.jsonl"
     export_for_models(str(labeled), str(model_input))

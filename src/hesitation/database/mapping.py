@@ -16,7 +16,7 @@ class FieldRule:
 
 
 @dataclass(slots=True)
-class CHICOMappingPack:
+class DatasetMappingPack:
     dataset_name: str
     version: str
     fps_default: int
@@ -24,7 +24,7 @@ class CHICOMappingPack:
     action_map: dict[str, str]
 
 
-def load_chico_mapping_pack(path: str | Path) -> CHICOMappingPack:
+def load_dataset_mapping_pack(path: str | Path) -> DatasetMappingPack:
     payload = load_config(path)
     fields = {
         key: FieldRule(
@@ -35,13 +35,21 @@ def load_chico_mapping_pack(path: str | Path) -> CHICOMappingPack:
         )
         for key, value in payload.get("fields", {}).items()
     }
-    return CHICOMappingPack(
-        dataset_name=str(payload.get("dataset_name", "chico")),
+    return DatasetMappingPack(
+        dataset_name=str(payload.get("dataset_name", "dataset")),
         version=str(payload.get("version", "unknown")),
         fps_default=int(payload.get("fps_default", 30)),
         fields=fields,
         action_map={str(k): str(v) for k, v in payload.get("action_map", {}).items()},
     )
+
+
+def load_chico_mapping_pack(path: str | Path) -> DatasetMappingPack:
+    return load_dataset_mapping_pack(path)
+
+
+def load_havid_mapping_pack(path: str | Path) -> DatasetMappingPack:
+    return load_dataset_mapping_pack(path)
 
 
 def read_first_available(payload: dict[str, Any], candidates: list[str]) -> Any:

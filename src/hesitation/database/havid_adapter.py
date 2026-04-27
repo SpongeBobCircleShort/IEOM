@@ -31,8 +31,8 @@ def _as_int(value: Any) -> int | None:
     return None
 
 
-class CHICOAdapter:
-    """CHICO-first adapter with explicit field-variant handling and assumptions."""
+class HAVIDAdapter:
+    """HA-ViD adapter with explicit mapping assumptions and unsupported-field logging."""
 
     def __init__(self, mapping_pack: DatasetMappingPack) -> None:
         self.mapping_pack = mapping_pack
@@ -41,7 +41,7 @@ class CHICOAdapter:
         path = Path(raw_path)
         files: list[Path] = [path] if path.is_file() else sorted(path.glob("*.jsonl"))
 
-        out: list[CanonicalRecord] = []
+        records: list[CanonicalRecord] = []
         unsupported_counter: Counter[str] = Counter()
         dropped = 0
 
@@ -51,21 +51,21 @@ class CHICOAdapter:
                 if record is None:
                     dropped += 1
                     continue
-                out.append(record)
+                records.append(record)
 
         report = MappingReport(
             dataset_name=self.mapping_pack.dataset_name,
-            records_total=len(out) + dropped,
-            mapped_records=len(out),
+            records_total=len(records) + dropped,
+            mapped_records=len(records),
             dropped_records=dropped,
             unsupported_fields=dict(unsupported_counter),
             assumptions=[
                 "timestamp converted to milliseconds when source provides seconds",
-                "action labels normalized through action_map",
-                "missing hand_right/torso fields preserved as null",
+                "action labels mapped via action_map",
+                "robot metadata may be unavailable and remains null",
             ],
         )
-        return out, report
+        return records, report
 
     def _normalize_row(
         self,
@@ -87,13 +87,15 @@ class CHICOAdapter:
         ts = get("timestamp")
         ts_ms = _as_int(ts)
         if ts_ms is not None and ts_ms < 100000:
-            # assume seconds for small values
             ts_ms *= 1000
 
-        hand_left = [_as_float(get("left_x")) or 0.0, _as_float(get("left_y")) or 0.0]
-        hand_right_x = _as_float(get("right_x"))
-        hand_right_y = _as_float(get("right_y"))
-        hand_right = [hand_right_x, hand_right_y] if hand_right_x is not None and hand_right_y is not None else None
+        left_x = _as_float(get("left_x"))
+        left_y = _as_float(get("left_y"))
+        if left_x is None or left_y is None:
+            return None
+
+        right_x = _as_float(get("right_x"))
+        right_y = _as_float(get("right_y"))
 
         action_raw = get("action_label")
         action_raw_s = str(action_raw) if action_raw is not None else None
@@ -119,22 +121,16 @@ class CHICOAdapter:
             frame_index=frame_idx,
             timestamp_ms=ts_ms,
             original_annotation_reference=str(get("annotation_reference")) if get("annotation_reference") is not None else None,
-            mapping_rule_id="chico_mapping_v1",
+            mapping_rule_id="havid_mapping_v1",
             derived_label_flag=False,
             confidence_in_mapping=pose_conf,
-            keypoints_2d=None,
-            keypoints_3d=None,
-            hand_left=hand_left,
-            hand_right=hand_right,
-            torso_center=None,
+            hand_left=[left_x, left_y],
+            hand_right=[right_x, right_y] if right_x is not None and right_y is not None else None,
             pose_confidence=pose_conf,
-            keypoint_visibility=None,
             robot_present=bool(get("robot_present")) if get("robot_present") is not None else None,
             robot_state=str(get("robot_state")) if get("robot_state") is not None else None,
-            robot_pose=None,
             human_robot_distance=_as_float(get("human_robot_distance")),
             shared_workspace_flag=bool(get("shared_workspace_flag")) if get("shared_workspace_flag") is not None else None,
-            workspace_region=str(get("workspace_region")) if get("workspace_region") is not None else None,
             overlap_event_native=bool(get("overlap_event_native")) if get("overlap_event_native") is not None else None,
             collision_event_native=bool(get("collision_event_native")) if get("collision_event_native") is not None else None,
             task_name=str(get("task_name")) if get("task_name") is not None else None,

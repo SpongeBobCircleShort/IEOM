@@ -1,6 +1,7 @@
 from hesitation.database.derivation import derive_hesitation_labels
 from hesitation.database.label_audit import audit_labels
-from hesitation.database.pipeline import load_canonical, normalize_chico
+from hesitation.database.io_utils import load_canonical
+from hesitation.database.pipeline import normalize_chico
 
 
 def test_label_derivation_and_audit(tmp_path) -> None:

@@ -1,5 +1,6 @@
 from hesitation.database.export import to_model_rows
-from hesitation.database.pipeline import load_canonical, normalize_chico
+from hesitation.database.io_utils import load_canonical
+from hesitation.database.pipeline import normalize_chico
 from hesitation.database.qc import compute_qc
 
 

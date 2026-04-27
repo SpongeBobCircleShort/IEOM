@@ -28,7 +28,8 @@ PYTHONPATH=src python -m hesitation.database.cli run-qc \
 
 PYTHONPATH=src python -m hesitation.database.cli build-splits \
   --input /tmp/chico_labeled.jsonl \
-  --output /tmp/chico_splits.json
+  --output /tmp/chico_splits.json \
+  --source-dataset chico
 
 PYTHONPATH=src python -m hesitation.database.cli export-model-input \
   --input /tmp/chico_labeled.jsonl \
@@ -52,3 +53,5 @@ PYTHONPATH=src python -m hesitation.database.cli run-benchmark \
 - `merged_database/reports/chico_splits_fixture.json`
 - `merged_database/reports/chico_benchmark_summary_fixture.json`
 - `merged_database/sample_outputs/chico_model_input_fixture.jsonl`
+
+- See also `merged_database/docs/havid_onboarding_and_cross_benchmark.md` for cross-dataset evaluation.

@@ -7,12 +7,15 @@ from typing import Any
 
 from hesitation.database.benchmark import run_first_benchmark
 from hesitation.database.chico_adapter import CHICOAdapter
+from hesitation.database.cross_benchmark import run_cross_dataset_benchmark
 from hesitation.database.derivation import derive_hesitation_labels
 from hesitation.database.export import to_model_rows
+from hesitation.database.harmonization import build_harmonization_report
+from hesitation.database.havid_adapter import HAVIDAdapter
 from hesitation.database.label_audit import audit_labels
-from hesitation.database.mapping import load_chico_mapping_pack
+from hesitation.database.mapping import load_chico_mapping_pack, load_havid_mapping_pack
 from hesitation.database.qc import compute_qc
-from hesitation.database.schemas import CanonicalRecord
+from hesitation.database.io_utils import load_canonical
 from hesitation.io.writers import write_jsonl
 
 
@@ -31,14 +34,22 @@ def normalize_chico(
     return output_path, report_path
 
 
-def load_canonical(path: str) -> list[CanonicalRecord]:
-    rows = []
-    with Path(path).open("r", encoding="utf-8") as f:
-        for line in f:
-            if line.strip():
-                rows.append(CanonicalRecord(**json.loads(line)))
-    return rows
+def normalize_havid(raw_path: str, mapping_config: str, output_path: str, report_path: str) -> tuple[str, str]:
+    pack = load_havid_mapping_pack(mapping_config)
+    adapter = HAVIDAdapter(pack)
+    records, report = adapter.normalize(raw_path)
 
+    write_jsonl(output_path, [record.to_dict() for record in records])
+    Path(report_path).write_text(json.dumps(asdict(report), indent=2), encoding="utf-8")
+    return output_path, report_path
+
+
+
+
+
+# backwards-compatible re-export
+def load_canonical_records(path: str):
+    return load_canonical(path)
 
 def derive_labels_and_audit(
     normalized_path: str,
@@ -62,7 +73,7 @@ def run_qc_report(labeled_path: str, output_path: str, dataset_name: str) -> str
     return output_path
 
 
-def build_splits(labeled_path: str, output_path: str) -> str:
+def build_splits(labeled_path: str, output_path: str, source_dataset: str) -> str:
     records = load_canonical(labeled_path)
     sessions = sorted({record.session_id for record in records})
     n = len(sessions)
@@ -71,7 +82,7 @@ def build_splits(labeled_path: str, output_path: str) -> str:
     test = sessions[max(2, int(0.8 * n)) :]
     payload: dict[str, Any] = {
         "within_dataset": {"train": train, "val": val, "test": test},
-        "cross_dataset": {"source_dataset": "chico", "target_dataset": "tbd"},
+        "cross_dataset": {"source_dataset": source_dataset, "target_dataset": "other"},
     }
     Path(output_path).write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return output_path
@@ -89,3 +100,14 @@ def run_benchmark_export(model_input_path: str, output_dir: str) -> str:
     report_path = Path(output_dir) / "benchmark_summary.json"
     report_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     return str(report_path)
+
+
+def run_cross_benchmark(chico_model_input: str, havid_model_input: str, output_dir: str) -> str:
+    summary = run_cross_dataset_benchmark(chico_model_input, havid_model_input, output_dir)
+    out = Path(output_dir) / "cross_dataset_benchmark_summary.json"
+    out.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    return str(out)
+
+
+def run_harmonization(chico_labeled: str, havid_labeled: str, output_json: str, output_md: str) -> tuple[str, str]:
+    return build_harmonization_report(chico_labeled, havid_labeled, output_json, output_md)

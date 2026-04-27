@@ -1,0 +1,17 @@
+{
+  "label_counts": {
+    "mild_hesitation": 8,
+    "normal_progress": 92,
+    "correction_rework": 4
+  },
+  "confidence_buckets": {
+    "medium": 8,
+    "high": 96
+  },
+  "trigger_counts": {
+    "micro_stop_or_pause": 8,
+    "default_normal": 92,
+    "native_rework": 4
+  },
+  "suspicious_sessions": []
+}
