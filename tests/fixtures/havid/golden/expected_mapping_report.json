@@ -1,7 +1,0 @@
-{
-  "dataset_name": "havid",
-  "records_total": 104,
-  "mapped_records": 104,
-  "dropped_records": 0,
-  "unsupported_field_expected": "sensor_vendor"
-}

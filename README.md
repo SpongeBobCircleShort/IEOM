@@ -17,8 +17,17 @@ IEOM/
 ├── 📂 simulations/           # MATLAB/Octave simulation files
 │   ├── baseline_handoff_simulation.m          # Main simulation (MATLAB)
 │   ├── baseline_handoff_simulation_octave.m   # Octave-compatible version
+│   ├── baseline_handoff_simulation_integrated.m # Enhanced integrated version
 │   ├── matlab_verify_three_scenarios.m        # Verification script
-│   └── matlab_cli_debug_smoke.m             # Debug harness
+│   ├── matlab_cli_debug_smoke.m             # Debug harness
+│   ├── matlab_ab_policy_smoke.m              # A/B policy smoke test
+│   ├── matlab_ab_expected_check.m           # A/B expected results check
+│   ├── matlab_baseline_expected_check.m     # Baseline expected results
+│   ├── matlab_python_bridge_smoke.m         # Python bridge integration test
+│   ├── matlab_run_ab_policy_benchmark.m      # Run A/B policy benchmark
+│   ├── test_matlab_cli_integration.m         # CLI integration test
+│   ├── test_matlab_integration.m             # Full integration test
+│   └── test_octave_struct.m                  # Octave structure test
 │
 ├── 📂 data/                 # Dataset and reference files
 │   ├── hrc_datasets.csv                     # 14 HRC datasets (100% reachable)
@@ -53,7 +62,12 @@ IEOM/
 │   ├── ieom_plan_tracking.db              # Tracking database
 │   └── [other archived items]
 │
-└── 📂 reports/              # Generated reports (empty)
+├── 📂 updates/              # Project updates and guides
+│   └── [update documentation files]
+│
+├── 📄 README.md              # Main project documentation
+├── 📄 PROGRAM_OVERVIEW.md   # Detailed program overview
+└── 📄 RESEARCH_PAPER.md     # Research paper draft (empty)
 ```
 
 ---
@@ -226,10 +240,13 @@ Average Separation: 0.0000 m (collision scenarios)
 ```
 Project Root: /Users/adijain/ENGINEERING/IEOM/
 Main Simulation: simulations/baseline_handoff_simulation.m
+Enhanced Simulation: simulations/baseline_handoff_simulation_integrated.m
 Data Files: data/ (hrc_datasets.csv, hrc_papers.csv, iso_safety_limits.csv)
 Documentation: docs/ (all .md and .txt files)
 Outputs: outputs/figures/ (all .png files)
 Scripts: scripts/ (all .py files)
+Test Files: simulations/ (test_*.m files)
+Archive: archive/ (historical files and databases)
 ```
 
 ### **Getting Help**

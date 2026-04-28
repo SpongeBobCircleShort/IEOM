@@ -1,5 +1,0 @@
-pass_all=1
-generated_at=20260426T230217
-Slow|v=0.400|t=12.500|min_sep=1.009|iso=1|row_pass=1
-Moderate|v=0.900|t=10.000|min_sep=2.230|iso=1|row_pass=1
-Aggressive|v=1.800|t=10.000|min_sep=3.629|iso=0|row_pass=1

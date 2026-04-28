@@ -1,8 +1,0 @@
-dataset_name,session_id,end_frame_idx,label,probability,threshold
-ha_vid,havid_s4,322,1,0.46860938132534696,0.5
-ha_vid,havid_s4,323,1,0.47171896112073847,0.5
-ha_vid,havid_s4,324,1,0.49414325494586936,0.5
-ha_vid,havid_s5,248,1,0.45499726526701006,0.5
-ha_vid,havid_s5,249,1,0.4570094721244181,0.5
-ha_vid,havid_s5,250,1,0.45616166461811924,0.5
-ha_vid,havid_s5,251,1,0.45848787841006,0.5

@@ -1,7 +1,0 @@
-{
-  "dataset_name": "chico",
-  "records_total": 112,
-  "mapped_records": 112,
-  "dropped_records": 0,
-  "unsupported_field_expected": "extra_sensor"
-}

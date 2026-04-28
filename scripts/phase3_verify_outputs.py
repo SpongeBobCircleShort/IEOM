@@ -73,7 +73,7 @@ def _python_executable() -> str:
 
 
 def _run_cli_predict(features: dict[str, float | int]) -> dict[str, Any]:
-    model_root = Path(__file__).parent / "ieom_model"
+    model_root = Path(__file__).parent
     cmd = [
         _python_executable(),
         "-m",
@@ -165,7 +165,7 @@ def main() -> int:
         "scenario_count": len(report_rows),
         "rows": report_rows,
     }
-    out_dir = Path(__file__).parent / "ieom_model" / "reports" / "phase3_verification"
+    out_dir = Path(__file__).parent / "reports" / "phase3_verification"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "output_verification_report.json"
     out_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
