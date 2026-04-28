@@ -46,7 +46,7 @@ prediction = predictor.predict_single({
 
 **MATLAB**:
 ```matlab
-cmd = sprintf('python3 -m hesitation.inference.cli predict --mean-hand-speed %.2f --pause-ratio %.2f ... --format json', ...);
+cmd = sprintf('PYTHONPATH=src python3 -m hesitation.inference.cli --format json predict --mean-hand-speed %.2f --pause-ratio %.2f ...', ...);
 [~, result] = system(cmd);
 prediction = jsondecode(result);
 ```
@@ -118,15 +118,14 @@ python3 -c "import sys; print(sys.version)"
 python3 -m hesitation.inference.cli health
 
 # 3. Test single prediction
-python3 -m hesitation.inference.cli predict \
+PYTHONPATH=src python3 -m hesitation.inference.cli --format json predict \
     --mean-hand-speed 0.5 \
     --pause-ratio 0.1 \
     --progress-delta 0.8 \
     --reversal-count 1 \
     --retry-count 0 \
     --task-step-id 3 \
-    --human-robot-distance 0.35 \
-    --format json
+    --human-robot-distance 0.35
 ```
 
 Python requirement: 3.10+ (3.11 recommended).
@@ -145,4 +144,3 @@ Python requirement: 3.10+ (3.11 recommended).
 - Memory: ~100 MB model
 - Throughput: ~500 predictions/second
 - Deterministic: Yes (same input always gives same output)
-

@@ -3,15 +3,14 @@
 Enables MATLAB to call the model via subprocess/system calls.
 
 Usage:
-    python -m hesitation.inference.cli predict \\
+    python -m hesitation.inference.cli --format json predict \\
         --mean-hand-speed 0.5 \\
         --pause-ratio 0.1 \\
         --progress-delta 0.8 \\
         --reversal-count 0 \\
         --retry-count 1 \\
         --task-step-id 2 \\
-        --human-robot-distance 0.3 \\
-        --format json
+        --human-robot-distance 0.3
 """
 
 import argparse
