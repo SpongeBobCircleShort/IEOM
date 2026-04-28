@@ -1,0 +1,18 @@
+{
+  "within_dataset": {
+    "train": [
+      "chico_s0",
+      "chico_s1"
+    ],
+    "val": [
+      "chico_s2"
+    ],
+    "test": [
+      "chico_s3"
+    ]
+  },
+  "cross_dataset": {
+    "source_dataset": "chico",
+    "target_dataset": "tbd"
+  }
+}

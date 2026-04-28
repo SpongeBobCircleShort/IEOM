@@ -51,11 +51,18 @@ IEOM/
 │   ├── figure6_datasets.png               # Dataset overview
 │   └── figure7_dataset_validation_octave.png # Validation analysis
 │
+├── 📂 src/                  # Restored Python hesitation package + MATLAB bridge
+│   ├── hesitation/                        # Hesitation simulation/inference package
+│   └── matlab/                            # MATLAB bridge helpers for Python integration
+│
 ├── 📂 scripts/              # Python and utility scripts
-│   ├── hrc_data_scraper.py                 # Dataset scraper
-│   ├── hrc_data_scraper_v2.py            # Enhanced scraper
-│   ├── phase3_verify_outputs.py            # Output verification
-│   └── temp.py                           # Temporary utilities
+│   ├── generate_synthetic_dataset.py      # Synthetic data generation
+│   ├── phase2_cli.py                      # Training/inference/deep workflow CLI
+│   ├── run_baseline.py                    # Rules baseline runner
+│   ├── hrc_data_scraper.py                # Dataset scraper
+│   ├── hrc_data_scraper_v2.py             # Enhanced scraper
+│   ├── phase3_verify_outputs.py           # Output verification
+│   └── temp.py                            # Temporary utilities
 │
 ├── 📂 archive/              # Archived files and databases
 │   ├── ieom_model/                        # Model files
@@ -94,11 +101,26 @@ cd simulations
 matlab -batch "baseline_handoff_simulation"
 ```
 
+### **Run Restored Hesitation Sim**
+
+#### **Python Package Setup**
+```bash
+pip install -e ".[dev,serve]"
+python -c "import hesitation"
+```
+
+#### **Synthetic Data + CLI Flow**
+```bash
+python scripts/generate_synthetic_dataset.py --output /tmp/ieom_synth.jsonl --n-sessions 8 --seed 17
+python scripts/phase2_cli.py train-classical --input /tmp/ieom_synth.jsonl --output-dir /tmp/ieom_phase2
+```
+
 ### **What You Get**
 - ✅ **7 visualization figures** including dataset validation analysis
 - ✅ **Comprehensive console output** with safety compliance checking
 - ✅ **ISO/TS 15066 validation** against all 14 datasets
 - ✅ **Performance metrics** and safety distribution analysis
+- ✅ **Restored hesitation package** for Python inference, evaluation, and MATLAB bridge workflows
 
 ---
 
@@ -155,12 +177,13 @@ Average Separation: 0.0000 m (collision scenarios)
 ### **Software Requirements**
 - **MATLAB R2018b+** for full feature support
 - **GNU Octave 11.1+** for open-source compatibility
-- **Python 3.8+** for data scraping scripts
+- **Python 3.10+** for the restored hesitation package and CLI workflows
 
 ### **Dependencies**
 - **CSV data files** in `data/` directory
 - **Graphics display** capability
 - **readtable()** function support
+- **Optional Python extras**: `.[dev]`, `.[serve]`, and `.[deep]`
 
 ---
 
@@ -179,7 +202,13 @@ Average Separation: 0.0000 m (collision scenarios)
 % Add new datasets to hrc_datasets.csv
 ```
 
-### **3. Output Management**
+### **3. Hesitation CLI**
+```bash
+python scripts/phase2_cli.py train-deep --input /tmp/ieom_synth.jsonl --output-dir /tmp/ieom_deep
+python scripts/phase2_cli.py evaluate-deep --input /tmp/ieom_synth.jsonl --model-path /tmp/ieom_deep/deep_model.pt
+```
+
+### **4. Output Management**
 ```matlab
 % Figures saved to outputs/figures/
 % Console reports generated automatically
@@ -194,6 +223,7 @@ Average Separation: 0.0000 m (collision scenarios)
 - **`docs/QUICK_START.txt`** - Quick start guide
 - **`docs/README_DATASETS.md`** - Dataset integration details
 - **`docs/HRC_SIMULATION_INTEGRATION_SUMMARY.md`** - Complete technical summary
+- **`docs/PHASE_1_SUMMARY.md`** - Hesitation package and inference interface summary
 
 ### **Technical References**
 - **`docs/DATASET_INTEGRATION_GUIDE.md`** - Implementation details
@@ -221,11 +251,12 @@ Average Separation: 0.0000 m (collision scenarios)
 ## 🔄 **MATLAB Team Handoff**
 
 ### **Handoff Notice**
-The Python-side dataset integration and repository organization are in place. The next phase belongs to the MATLAB team: verify the simulation path end-to-end in MATLAB, lock down expected behavior for the baseline scenarios, and move the project from "runs" to "trusted and reproducible."
+The repository now contains both the MATLAB-first simulation workflow and the restored Python hesitation stack. The next phase belongs to the MATLAB team: verify the simulation path end-to-end in MATLAB, confirm the Python bridge still resolves correctly, and move the project from "runs" to "trusted and reproducible."
 
 ### **What the MATLAB Team Should Own**
 - Confirm that `simulations/baseline_handoff_simulation.m` is the canonical entry point for MATLAB runs.
 - Verify that supporting scripts in `simulations/` still pass when executed from a clean MATLAB session.
+- Confirm that the restored Python package installs from repo root and that MATLAB bridge scripts can resolve `hesitation.inference.cli`.
 - Validate that the integrated simulation behavior matches the documented three-scenario expectations.
 - Tighten any parts of the MATLAB code that still depend on manual inspection instead of scripted checks.
 - Keep generated figures, console outputs, and any benchmark results reproducible.
@@ -235,12 +266,14 @@ The Python-side dataset integration and repository organization are in place. Th
 2. Run smoke checks next: `matlab_cli_debug_smoke.m`, `matlab_ab_policy_smoke.m`, and `matlab_python_bridge_smoke.m`.
 3. Run expected-result checks: `matlab_baseline_expected_check.m` and `matlab_ab_expected_check.m`.
 4. Run integration coverage last: `test_matlab_integration.m` and `test_matlab_cli_integration.m`.
-5. Record any failures with exact MATLAB version, command used, stack trace, and whether the issue is logic, environment, or data-path related.
+5. Run Python packaging verification from repo root: `pip install -e ".[dev,serve]"` and `python -c "import hesitation"`.
+6. Record any failures with exact MATLAB version, command used, stack trace, and whether the issue is logic, environment, data-path, or Python-environment related.
 
 ### **Definition of Done for This Handoff**
 - Baseline simulation runs in MATLAB without manual patching.
 - Three-scenario verification produces expected outputs.
 - A/B policy benchmark executes cleanly and results are interpretable.
+- MATLAB bridge smoke scripts can call into the restored Python hesitation entrypoints.
 - MATLAB integration tests pass or have clearly documented blockers.
 - Any required code changes are pushed back into the canonical scripts, not left as local workspace edits.
 

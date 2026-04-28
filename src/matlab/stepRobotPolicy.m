@@ -1,0 +1,139 @@
+function robot = stepRobotPolicy(robot, human, interaction, prediction, policy_name, schedule, config, frame_idx)
+% stepRobotPolicy: Update robot mode and 2D motion for policy A or B.
+
+    robot.state_changed = false;
+    base_speed_scale = 1.0;
+
+    if frame_idx < schedule.robot_release_frame
+        robot.mode = 'proceed';
+        robot.speed_scale_cmd = 0.0;
+        robot.wait_frames = robot.wait_frames + 1;
+        robot.vel_xy = [0.0, 0.0];
+        return;
+    elseif interaction.separation_m < config.workspace.hard_safety_radius_m
+        robot = setRobotMode(robot, 'emergency_stop');
+    elseif strcmp(robot.mode, 'emergency_stop') && interaction.separation_m >= config.workspace.emergency_release_radius_m
+        robot = setRobotMode(robot, 'proceed');
+    elseif strcmp(policy_name, 'A')
+        if ~strcmp(robot.mode, 'emergency_stop')
+            robot = setRobotMode(robot, 'proceed');
+        end
+    else
+        robot = applyPolicyB(robot, interaction, prediction, config);
+    end
+
+    if strcmp(robot.mode, 'hold') || strcmp(robot.mode, 'emergency_stop')
+        base_speed_scale = 0.0;
+        robot.wait_frames = robot.wait_frames + 1;
+    elseif strcmp(robot.mode, 'slow')
+        base_speed_scale = config.policy_b.slow_speed_scale;
+        robot.wait_frames = robot.wait_frames + 1;
+        robot.slow_frames = robot.slow_frames + 1;
+    end
+
+    robot.speed_scale_cmd = base_speed_scale;
+    target_idx = robot.target_idx;
+    if strcmp(policy_name, 'B') && strcmp(robot.mode, 'hold')
+        target_idx = min(2, robot.target_idx);
+    elseif strcmp(policy_name, 'B') && strcmp(robot.mode, 'slow') && robot.target_idx >= 3 && ~interaction.robot_in_shared_zone
+        target_idx = 2;
+    end
+
+    target_xy = config.workspace.robot_waypoints_xy(target_idx, :);
+    [new_pos_xy, new_vel_xy] = moveTowardTarget(robot.pos_xy, target_xy, schedule.robot_nominal_speed_mps * base_speed_scale, config.dt_sec);
+    robot.pos_xy = clampToBounds(new_pos_xy, config.workspace.bounds_xy);
+    robot.vel_xy = new_vel_xy;
+
+    if base_speed_scale > 0.0
+        while robot.target_idx < size(config.workspace.robot_waypoints_xy, 1) && ...
+                reachedWaypoint(robot.pos_xy, config.workspace.robot_waypoints_xy(robot.target_idx, :), 0.035)
+            robot.target_idx = robot.target_idx + 1;
+        end
+    end
+
+    if robot.target_idx >= size(config.workspace.robot_waypoints_xy, 1) && ...
+            reachedWaypoint(robot.pos_xy, config.workspace.robot_waypoints_xy(end, :), 0.035)
+        robot.completed = true;
+    end
+end
+
+function robot = applyPolicyB(robot, interaction, prediction, config)
+    hold_condition = strcmp(prediction.state, 'strong_hesitation') || ...
+        strcmp(prediction.state, 'correction_rework') || ...
+        prediction.future_hesitation_prob >= config.policy_b.hold_future_hesitation_threshold || ...
+        prediction.future_correction_prob >= config.policy_b.hold_future_correction_threshold;
+
+    slow_condition = strcmp(prediction.state, 'mild_hesitation') || ...
+        prediction.future_hesitation_prob >= config.policy_b.slow_future_hesitation_threshold || ...
+        interaction.separation_m < config.policy_b.slow_separation_threshold_m;
+
+    low_risk_release = prediction.future_hesitation_prob < config.policy_b.low_risk_future_hesitation_threshold && ...
+        prediction.future_correction_prob < config.policy_b.low_risk_future_correction_threshold && ...
+        ~strcmp(prediction.state, 'strong_hesitation') && ...
+        ~strcmp(prediction.state, 'correction_rework');
+
+    if hold_condition
+        robot.release_stable_frames = 0;
+        robot = setRobotMode(robot, 'hold');
+        return;
+    end
+
+    if slow_condition
+        if strcmp(robot.mode, 'hold') || strcmp(robot.mode, 'slow')
+            robot.release_stable_frames = 0;
+        end
+        robot = setRobotMode(robot, 'slow');
+        return;
+    end
+
+    if strcmp(robot.mode, 'hold') || strcmp(robot.mode, 'slow')
+        if low_risk_release
+            robot.release_stable_frames = robot.release_stable_frames + 1;
+        else
+            robot.release_stable_frames = 0;
+        end
+
+        if robot.release_stable_frames < config.policy_b.release_required_ticks
+            return;
+        end
+        robot.release_stable_frames = 0;
+    end
+
+    robot = setRobotMode(robot, 'proceed');
+end
+
+function robot = setRobotMode(robot, new_mode)
+    if strcmp(robot.mode, new_mode)
+        return;
+    end
+
+    robot.mode = new_mode;
+    robot.state_changed = true;
+    if strcmp(new_mode, 'hold')
+        robot.hold_count = robot.hold_count + 1;
+    end
+end
+
+function [new_pos_xy, new_vel_xy] = moveTowardTarget(pos_xy, target_xy, speed_mps, dt_sec)
+    delta = target_xy - pos_xy;
+    distance = norm(delta);
+    if distance < 1e-9 || speed_mps <= 0.0
+        new_pos_xy = pos_xy;
+        new_vel_xy = [0.0, 0.0];
+        return;
+    end
+
+    direction = delta / distance;
+    step_distance = min(distance, speed_mps * dt_sec);
+    new_vel_xy = direction * (step_distance / dt_sec);
+    new_pos_xy = pos_xy + direction * step_distance;
+end
+
+function flag = reachedWaypoint(pos_xy, target_xy, tolerance_m)
+    flag = norm(pos_xy - target_xy) <= tolerance_m;
+end
+
+function pos_xy = clampToBounds(pos_xy, bounds_xy)
+    pos_xy(1) = min(max(pos_xy(1), bounds_xy(1, 1)), bounds_xy(1, 2));
+    pos_xy(2) = min(max(pos_xy(2), bounds_xy(2, 1)), bounds_xy(2, 2));
+end
