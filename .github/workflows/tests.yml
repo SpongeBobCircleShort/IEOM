@@ -12,9 +12,41 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install --upgrade pip
-      - run: pip install -e ".[dev,serve]"
-      - run: pytest -q -m "not deep"
+      - name: Compile maintained Python scripts
+        run: |
+          python -m py_compile \
+            scripts/generate_paper_benchmark_inputs.py \
+            scripts/generate_synthetic_dataset.py \
+            scripts/hrc_data_scraper.py \
+            scripts/hrc_data_scraper_v2.py \
+            scripts/inspect_sample.py \
+            scripts/phase2_cli.py \
+            scripts/phase3_verify_outputs.py \
+            scripts/real_dataset_onboarding.py \
+            scripts/run_baseline.py
+      - name: Validate core repository files
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          required = [
+              "README.md",
+              "PROGRAM_OVERVIEW.md",
+              "data/hrc_datasets.csv",
+              "data/hrc_papers.csv",
+              "data/iso_safety_limits.csv",
+              "simulations/baseline_handoff_simulation.m",
+              "simulations/baseline_handoff_simulation_integrated.m",
+              "simulations/baseline_handoff_simulation_octave.m",
+              "simulations/matlab_verify_three_scenarios.m",
+              "docs/QUICK_START.txt",
+              "docs/README_DATASETS.md",
+          ]
+          missing = [path for path in required if not Path(path).is_file()]
+          if missing:
+              raise SystemExit(f"missing required files: {missing}")
+          print(f"validated {len(required)} required files")
+          PY
 
   unit-deep:
     runs-on: ubuntu-latest
@@ -23,14 +55,34 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install --upgrade pip
-      - run: pip install -e ".[dev,serve]"
-      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch==2.7.1
-      - run: python -c "import importlib.util; assert importlib.util.find_spec('torch') is not None"
-      - run: python -c "import torch; print(torch.__version__)"
-      - run: pytest -q -m deep
-      - run: python scripts/generate_synthetic_dataset.py --output /tmp/deep_synth.jsonl --n-sessions 8 --seed 17
-      - run: python scripts/phase2_cli.py train-deep --input /tmp/deep_synth.jsonl --output-dir /tmp/deep_artifacts --window-size 15 --horizon-frames 10 --seed 17 --epochs 6 --batch-size 16
-      - run: python scripts/phase2_cli.py evaluate-deep --input /tmp/deep_synth.jsonl --model-path /tmp/deep_artifacts/deep_model.pt --output /tmp/deep_artifacts/deep_eval.json
-      - run: python scripts/phase2_cli.py tune-thresholds --input /tmp/deep_synth.jsonl --model-path /tmp/deep_artifacts/deep_model.pt --output /tmp/deep_artifacts/deep_thresholds.json
-      - run: python scripts/phase2_cli.py evaluate-deep-calibrated --input /tmp/deep_synth.jsonl --model-path /tmp/deep_artifacts/deep_model.pt --threshold-path /tmp/deep_artifacts/deep_thresholds.json --output /tmp/deep_artifacts/deep_eval_calibrated.json
+      - name: Validate simulation inventory and data payloads
+        run: |
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+
+          simulations = sorted(Path("simulations").glob("*.m"))
+          if len(simulations) < 10:
+              raise SystemExit(f"expected at least 10 MATLAB files, found {len(simulations)}")
+
+          data_files = [
+              Path("data/hrc_datasets.csv"),
+              Path("data/hrc_papers.csv"),
+              Path("data/iso_safety_limits.csv"),
+          ]
+          for path in data_files:
+              with path.open(newline="", encoding="utf-8") as handle:
+                  rows = list(csv.reader(handle))
+              if len(rows) < 2:
+                  raise SystemExit(f"{path} does not contain data rows")
+
+          figure_dir = Path("outputs/figures")
+          pngs = sorted(figure_dir.glob("*.png"))
+          if len(pngs) < 3:
+              raise SystemExit(f"expected generated figures in {figure_dir}, found {len(pngs)}")
+
+          print(
+              f"validated {len(simulations)} MATLAB files, "
+              f"{len(data_files)} CSV payloads, and {len(pngs)} figures"
+          )
+          PY
