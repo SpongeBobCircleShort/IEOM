@@ -1,0 +1,27 @@
+Loading datasets...
+ISO/TS 15066 limits loaded: Max speed (hand) = 1.0 m/s, Force = 140 N
+
+╔════════════════════════════════════════════════════════════╗
+║         HRC DATASET VALIDATION AGAINST SIMULATION          ║
+╠════════════════════════════════════════════════════════════╣
+║  Found 20 reachable datasets for validation
+║  Comparing simulation scenarios with real-world data...
+╠════════════════════════════════════════════════════════════╣
+║  Dataset 1: HRC Handover Dataset (TU Munich)
+║    Robot: KUKA LBR iiwa 14 | Task: Object handover (robot-to-human) | Subjects: 20 | Format: CSV / ROS bags
+║    → Matched scenario: Moderate (v = 0.90 m/s)
+║    → Min separation: 2.2300 m | Task time: 10.000 s
+║    → Safety: SAFE | ISO Compliant: true
+║
+{Index exceeds the number of array elements. Index must not exceed 1.
+
+Error in tabular/dotParenReference (line 108)
+    b = b(rowIndices);
+        ^^^^^^^^^^^^^
+Error in baseline_handoff_simulation (line 429)
+    ds_subjects = local_tochar(dataset.subjects(i));
+                               ^^^^^^^^^^^^^^^^^^^
+Error in run (line 112)
+evalin('caller', strcat(scriptStem, ';'));
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+} 

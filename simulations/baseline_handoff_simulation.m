@@ -423,14 +423,14 @@ validation_results = struct();
 
 for i = 1:height(reachable_datasets)
     dataset = reachable_datasets(i, :);
-    ds_name = dataset.name{1};
-    ds_robot = dataset.robot{1};
-    ds_task = dataset.task{1};
-    ds_subjects = dataset.subjects(i);
-    ds_format = dataset.format{1};
+    ds_name = local_tochar(dataset.name{1});
+    ds_robot = local_tochar(dataset.robot{1});
+    ds_task = local_tochar(dataset.task{1});
+    ds_subjects = local_tochar(dataset.subjects{1});
+    ds_format = local_tochar(dataset.format{1});
     
     fprintf('║  Dataset %d: %s\n', i, ds_name);
-    fprintf('║    Robot: %s | Task: %s | Subjects: %d | Format: %s\n', ...
+    fprintf('║    Robot: %s | Task: %s | Subjects: %s | Format: %s\n', ...
             ds_robot, ds_task, ds_subjects, ds_format);
     
     % Extract speed information from task/description if available
@@ -440,19 +440,16 @@ for i = 1:height(reachable_datasets)
     % Determine likely speed category based on task type
     if contains(lower(ds_task), 'careful') || contains(lower(ds_task), 'safety')
         likely_category = 'Slow';
-        recommended_speed = robot_speeds.speed(1); % Slow
     elseif contains(lower(ds_task), 'efficient') || contains(lower(ds_task), 'fast')
         likely_category = 'Aggressive';
-        recommended_speed = robot_speeds.speed(3); % Aggressive
     else
         likely_category = 'Moderate';
-        recommended_speed = robot_speeds.speed(2); % Moderate
     end
     
     % Compare with simulation results
     matching_scenario = [];
     for s = 1:3
-        if strcmp(robot_speeds.name{s}, likely_category)
+        if strcmp(robot_speeds(s).name, likely_category)
             matching_scenario = results(s);
             break;
         end
@@ -571,7 +568,8 @@ if total_validated > 0
     robot_types = {};
     speeds = [];
     separations = [];
-    safety_colors = [];
+    safety_colors = zeros(total_validated, 3);
+    safety_statuses = cell(1, total_validated);
     
     for i = 1:total_validated
         result = validation_results.(field_names{i});
@@ -584,15 +582,16 @@ if total_validated > 0
         robot_types{i} = result.robot;
         speeds(i) = result.speed;
         separations(i) = result.separation;
+        safety_statuses{i} = result.safety_status;
         
         % Color code by safety status
         switch result.safety_status
             case 'SAFE'
-                safety_colors(i) = [0.2, 0.8, 0.2]; % Green
+                safety_colors(i, :) = [0.2, 0.8, 0.2]; % Green
             case 'MARGINAL'
-                safety_colors(i) = [1.0, 0.8, 0.0]; % Yellow
+                safety_colors(i, :) = [1.0, 0.8, 0.0]; % Yellow
             case 'UNSAFE'
-                safety_colors(i) = [0.9, 0.2, 0.2]; % Red
+                safety_colors(i, :) = [0.9, 0.2, 0.2]; % Red
         end
     end
     
@@ -609,9 +608,9 @@ if total_validated > 0
     
     % Add simulation scenario markers
     for s = 1:3
-        scatter(robot_speeds.speed(s), results(s).min_sep, 100, 'k', '^', ...
+        scatter(robot_speeds(s).speed, results(s).min_sep, 100, 'k', '^', ...
                'MarkerEdgeColor', 'w', 'LineWidth', 2, 'MarkerFaceColor', 'k');
-        text(robot_speeds.speed(s), results(s).min_sep + 0.02, robot_speeds.name{s}, ...
+        text(robot_speeds(s).speed, results(s).min_sep + 0.02, robot_speeds(s).name, ...
              'HorizontalAlignment', 'center', 'FontSize', 9, 'FontWeight', 'bold');
     end
     
@@ -634,9 +633,9 @@ if total_validated > 0
     
     % Subplot 3: Speed Distribution by Safety
     subplot(2, 2, 3);
-    safe_speeds = speeds(strcmp({validation_results.(field_names{:}).safety_status}, 'SAFE'));
-    marginal_speeds = speeds(strcmp({validation_results.(field_names{:}).safety_status}, 'MARGINAL'));
-    unsafe_speeds = speeds(strcmp({validation_results.(field_names{:}).safety_status}, 'UNSAFE'));
+    safe_speeds = speeds(strcmp(safety_statuses, 'SAFE'));
+    marginal_speeds = speeds(strcmp(safety_statuses, 'MARGINAL'));
+    unsafe_speeds = speeds(strcmp(safety_statuses, 'UNSAFE'));
     
     hold on;
     if ~isempty(safe_speeds)
@@ -787,7 +786,7 @@ for i = 1:min(3, height(hrc_datasets_table))
     ds = hrc_datasets_table(i, :);
     fprintf('║    • %s\n', ds.name{1});
     fprintf('║      Robot: %s | Task: %s | Subjects: %s\n', ...
-            ds.robot{1}, ds.task{1}, char(ds.subjects(i)));
+            local_tochar(ds.robot{1}), local_tochar(ds.task{1}), local_tochar(ds.subjects{1}));
 end
 fprintf('║\n');
 fprintf('║  RESEARCH PAPERS (%d entries):\n', height(hrc_papers_table));
@@ -802,3 +801,25 @@ fprintf('║    • ISO/TS 15066:2016 — Collaborative robots - Safety requirem
 fprintf('║    • Body regions analyzed: %d regions with force/speed limits\n', height(iso_limits));
 fprintf('║    • Hand/Finger safe contact speed: ≤ %.1f m/s (quasi-static force)\n', iso_hand_speed);
 fprintf('╚════════════════════════════════════════════════════════════╝\n\n');
+
+function s = local_tochar(x)
+%LOCAL_TOCHAR Coerce cell/string/char to char for fprintf('%s').
+    while iscell(x) && ~isempty(x)
+        x = x{1};
+    end
+    if isstring(x)
+        x = char(x);
+    elseif ischar(x)
+        % ok
+    elseif isnumeric(x) || islogical(x)
+        x = num2str(x);
+    else
+        try
+            x = string(x);
+            x = char(x);
+        catch
+            x = '<unprintable>';
+        end
+    end
+    s = x;
+end
