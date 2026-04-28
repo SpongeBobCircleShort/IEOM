@@ -72,8 +72,10 @@ fprintf('ISO/TS 15066 limits loaded: Max speed (hand) = %.1f m/s, Force = %.0f N
 
 %% ── PARAMETERS ────────────────────────────────────────────
 
-% Handoff point (fixed, in meters along a 1-D axis)
-x_handoff = 5.0;          % [m]
+% Handoff points (fixed, in meters along a 1-D axis)
+x_handoff_robot = 5.2;    % Robot handoff position  [m]
+x_handoff_human = 4.8;    % Human handoff position [m]
+x_handoff_center = 5.0;   % Center of handoff zone  [m]
 
 % Initial positions
 x_robot_0 = 10.0;         % Robot starts to the right  [m]
@@ -93,7 +95,7 @@ safety_threshold = 0.5;   % [m]
 iso_compliance_speed = iso_hand_speed * 0.8;  % 80% of ISO limit
 
 %% ── SIMULATION FUNCTION ───────────────────────────────────
-function [t, x_robot, x_human, min_sep, t_complete] = simulate_handoff(v_robot, v_human, x_robot_0, x_human_0, x_handoff, ~)
+function [t, x_robot, x_human, min_sep, t_complete] = simulate_handoff(v_robot, v_human, x_robot_0, x_human_0, x_handoff_robot, x_handoff_human)
     % Time parameters
     dt = 0.01;             % [s] time step
     t_max = 30;            % [s] maximum simulation time
@@ -109,18 +111,18 @@ function [t, x_robot, x_human, min_sep, t_complete] = simulate_handoff(v_robot, 
     
     % Simulate motion
     for i = 2:length(t)
-        % Robot moves toward handoff point
-        if x_robot(i-1) > x_handoff
+        % Robot moves toward its handoff point
+        if x_robot(i-1) > x_handoff_robot
             x_robot(i) = x_robot(i-1) - v_robot * dt;
         else
-            x_robot(i) = x_handoff;  % Stop at handoff point
+            x_robot(i) = x_handoff_robot;  % Stop at robot handoff point
         end
         
-        % Human moves toward handoff point
-        if x_human(i-1) < x_handoff
+        % Human moves toward its handoff point
+        if x_human(i-1) < x_handoff_human
             x_human(i) = x_human(i-1) + v_human * dt;
         else
-            x_human(i) = x_handoff;  % Stop at handoff point
+            x_human(i) = x_handoff_human;  % Stop at human handoff point
         end
     end
     
@@ -128,8 +130,10 @@ function [t, x_robot, x_human, min_sep, t_complete] = simulate_handoff(v_robot, 
     separation = abs(x_robot - x_human);
     min_sep = min(separation);
     
-    % Find task completion time (both at handoff point)
-    at_handoff = (abs(x_robot - x_handoff) < 0.01) & (abs(x_human - x_handoff) < 0.01);
+    % Find task completion time (both at their respective handoff points)
+    robot_at_handoff = abs(x_robot - x_handoff_robot) < 0.01;
+    human_at_handoff = abs(x_human - x_handoff_human) < 0.01;
+    at_handoff = robot_at_handoff & human_at_handoff;
     if any(at_handoff)
         t_complete_idx = find(at_handoff, 1);
         t_complete = t(t_complete_idx);
@@ -145,7 +149,7 @@ for s = 1:3
     v_robot = robot_speeds_array(s);
     scenario_name = robot_names{s};
     
-    [t, x_robot, x_human, min_sep, t_complete] = simulate_handoff(v_robot, v_human, x_robot_0, x_human_0, x_handoff, safety_threshold);
+    [t, x_robot, x_human, min_sep, t_complete] = simulate_handoff(v_robot, v_human, x_robot_0, x_human_0, x_handoff_robot, x_handoff_human);
     
     % Store results
     results(s).name = scenario_name;
@@ -363,24 +367,18 @@ for s = 1:n_scenarios
     task_times(s) = results(s).t_complete;
 end
 
-% Create dual-axis plot manually (Octave compatible)
-% Plot separation on left axis
-% Use modern yyaxis (available in recent Octave/MATLAB versions)
-yyaxis left
-bar(min_separations);
-ylabel('Min Separation [m]');
-yyaxis right
-plot(task_times, '-o');
-ylabel('Task Time [s]');
+% Create dual-axis plot (Octave compatible using plotyy)
+[ax, h1, h2] = plotyy(1:n_scenarios, min_separations, 1:n_scenarios, task_times, 'bar', 'plot');
 
-% Set axis limits and properties for yyaxis
-yyaxis left
-ylim([0, max(min_separations)*1.2]);
-ylabel('Min Separation (m)', 'FontSize', 11);
+% Set properties for left axis (separation)
+set(ax(1), 'YLim', [0, max(min_separations)*1.2]);
+ylabel(ax(1), 'Min Separation (m)', 'FontSize', 11);
+set(h1, 'FaceColor', [0.2 0.4 0.8]);
 
-yyaxis right
-ylim([min(task_times)*0.9, max(task_times)*1.1]);
-ylabel('Task Completion Time (s)', 'FontSize', 11);
+% Set properties for right axis (task time)
+set(ax(2), 'YLim', [min(task_times)*0.9, max(task_times)*1.1]);
+ylabel(ax(2), 'Task Completion Time (s)', 'FontSize', 11);
+set(h2, 'Marker', 'o', 'LineWidth', 2, 'Color', [0.8 0.2 0.2]);
 
 % Set common properties
 xticklabels(scenario_names);
@@ -409,8 +407,10 @@ fprintf('\n');
 fprintf('╔══════════════════════════════════════════════════════════╗\n');
 fprintf('║      BASELINE HAND-OFF SIMULATION — RESULTS SUMMARY      ║\n');
 fprintf('╠══════════════════════════════════════════════════════════╣\n');
-fprintf('║  Human speed : %.2f m/s  |  Handoff point: %.1f m        ║\n', ...
-        v_human, x_handoff);
+fprintf('║  Human speed : %.2f m/s  |  Handoff center: %.1f m        ║\n', ...
+        v_human, x_handoff_center);
+fprintf('║  Robot target: %.1f m  |  Human target: %.1f m           ║\n', ...
+        x_handoff_robot, x_handoff_human);
 fprintf('║  Safety threshold : %.2f m                               ║\n', ...
         safety_threshold);
 fprintf('╠════════════╦════════════╦════════════════╦═════════════════╣\n');
@@ -440,3 +440,7 @@ fprintf('║             • Speed profile optimization                  ║\n')
 fprintf('║             • ISO compliance validation                   ║\n');
 fprintf('║             • Safety-critical controller design           ║\n');
 fprintf('╚════════════════════════════════════════════════════════════╝\n\n');
+
+% Keep plot window open for viewing
+fprintf('Press Ctrl+C to exit...\n');
+pause;
