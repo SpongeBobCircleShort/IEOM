@@ -1,0 +1,9 @@
+{
+  "chico_path": "reports/paper_ready/inputs/chico_model_input.jsonl",
+  "havid": {
+    "path": "reports/paper_ready/inputs/havid_model_input.jsonl",
+    "sessions": 6,
+    "rows": 2808,
+    "config": "configs/simulation/domain_gap_scene.yaml"
+  }
+}

@@ -1,0 +1,16 @@
+dataset_name,session_id,end_frame_idx,label,probability,threshold
+chico,chico_s3,7,0,1.0,0.5
+chico,chico_s3,8,0,1.0,0.5
+chico,chico_s3,9,0,1.0,0.5
+chico,chico_s3,10,0,1.0,0.5
+chico,chico_s3,11,0,1.0,0.5
+chico,chico_s3,12,0,1.0,0.5
+chico,chico_s3,13,0,1.0,0.5
+chico,chico_s3,14,0,1.0,0.5
+chico,chico_s3,15,0,1.0,0.5
+chico,chico_s3,16,0,1.0,0.5
+chico,chico_s3,17,0,1.0,0.5
+chico,chico_s3,18,0,1.0,0.5
+chico,chico_s3,19,0,1.0,0.5
+chico,chico_s3,20,0,1.0,0.5
+chico,chico_s3,21,0,1.0,0.5

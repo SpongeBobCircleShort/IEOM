@@ -1,0 +1,125 @@
+{
+  "state_metrics": {
+    "accuracy": 0.34378378378378377,
+    "macro_f1": 0.21191959917078462,
+    "per_class": {
+      "correction_rework": {
+        "precision": 0.5232558139534884,
+        "recall": 0.7627118644067796,
+        "f1": 0.6206896551724138
+      },
+      "mild_hesitation": {
+        "precision": 0.2910602910602911,
+        "recall": 0.5882352941176471,
+        "f1": 0.3894297635605007
+      },
+      "normal_progress": {
+        "precision": 0.23118279569892472,
+        "recall": 0.3006993006993007,
+        "f1": 0.2613981762917933
+      },
+      "overlap_risk": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "ready_for_robot_action": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "strong_hesitation": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "confusion_matrix": {
+      "correction_rework": {
+        "correction_rework": 135,
+        "mild_hesitation": 23,
+        "normal_progress": 19,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      },
+      "mild_hesitation": {
+        "correction_rework": 44,
+        "mild_hesitation": 140,
+        "normal_progress": 54,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      },
+      "normal_progress": {
+        "correction_rework": 1,
+        "mild_hesitation": 99,
+        "normal_progress": 43,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      },
+      "overlap_risk": {
+        "correction_rework": 2,
+        "mild_hesitation": 106,
+        "normal_progress": 30,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      },
+      "ready_for_robot_action": {
+        "correction_rework": 1,
+        "mild_hesitation": 72,
+        "normal_progress": 15,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      },
+      "strong_hesitation": {
+        "correction_rework": 75,
+        "mild_hesitation": 41,
+        "normal_progress": 25,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      }
+    }
+  },
+  "hardest_confusion_pairs": [
+    {
+      "true_label": "overlap_risk",
+      "predicted_label": "mild_hesitation",
+      "count": 106
+    },
+    {
+      "true_label": "normal_progress",
+      "predicted_label": "mild_hesitation",
+      "count": 99
+    },
+    {
+      "true_label": "strong_hesitation",
+      "predicted_label": "correction_rework",
+      "count": 75
+    },
+    {
+      "true_label": "ready_for_robot_action",
+      "predicted_label": "mild_hesitation",
+      "count": 72
+    },
+    {
+      "true_label": "mild_hesitation",
+      "predicted_label": "normal_progress",
+      "count": 54
+    }
+  ],
+  "future_hesitation_threshold": 0.5,
+  "future_correction_threshold": 0.5,
+  "future_hesitation_fp": 74,
+  "future_hesitation_fn": 0,
+  "future_correction_fp": 292,
+  "future_correction_fn": 20,
+  "trigger_audit": {
+    "trigger_counts": {},
+    "trigger_state_breakdown": {}
+  }
+}

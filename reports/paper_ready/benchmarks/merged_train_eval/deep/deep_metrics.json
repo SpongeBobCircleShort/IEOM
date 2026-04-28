@@ -1,0 +1,229 @@
+{
+  "backend": "torch",
+  "current_state_deep": {
+    "accuracy": 0.34378378378378377,
+    "macro_f1": 0.21191959917078462,
+    "per_class": {
+      "correction_rework": {
+        "precision": 0.5232558139534884,
+        "recall": 0.7627118644067796,
+        "f1": 0.6206896551724138
+      },
+      "mild_hesitation": {
+        "precision": 0.2910602910602911,
+        "recall": 0.5882352941176471,
+        "f1": 0.3894297635605007
+      },
+      "normal_progress": {
+        "precision": 0.23118279569892472,
+        "recall": 0.3006993006993007,
+        "f1": 0.2613981762917933
+      },
+      "overlap_risk": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "ready_for_robot_action": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "strong_hesitation": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "confusion_matrix": {
+      "correction_rework": {
+        "correction_rework": 135,
+        "mild_hesitation": 23,
+        "normal_progress": 19,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      },
+      "mild_hesitation": {
+        "correction_rework": 44,
+        "mild_hesitation": 140,
+        "normal_progress": 54,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      },
+      "normal_progress": {
+        "correction_rework": 1,
+        "mild_hesitation": 99,
+        "normal_progress": 43,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      },
+      "overlap_risk": {
+        "correction_rework": 2,
+        "mild_hesitation": 106,
+        "normal_progress": 30,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      },
+      "ready_for_robot_action": {
+        "correction_rework": 1,
+        "mild_hesitation": 72,
+        "normal_progress": 15,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      },
+      "strong_hesitation": {
+        "correction_rework": 75,
+        "mild_hesitation": 41,
+        "normal_progress": 25,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      }
+    }
+  },
+  "current_state_rules": {
+    "accuracy": 0.19675675675675675,
+    "macro_f1": 0.12509122346758816,
+    "per_class": {
+      "correction_rework": {
+        "precision": 0.19881305637982197,
+        "recall": 0.7570621468926554,
+        "f1": 0.3149236192714454
+      },
+      "mild_hesitation": {
+        "precision": 0.2564102564102564,
+        "recall": 0.08403361344537816,
+        "f1": 0.12658227848101264
+      },
+      "normal_progress": {
+        "precision": 0.125,
+        "recall": 0.06293706293706294,
+        "f1": 0.08372093023255814
+      },
+      "overlap_risk": {
+        "precision": 0.05555555555555555,
+        "recall": 0.007246376811594203,
+        "f1": 0.01282051282051282
+      },
+      "ready_for_robot_action": {
+        "precision": 0.125,
+        "recall": 0.045454545454545456,
+        "f1": 0.06666666666666667
+      },
+      "strong_hesitation": {
+        "precision": 0.27450980392156865,
+        "recall": 0.09929078014184398,
+        "f1": 0.14583333333333334
+      }
+    },
+    "confusion_matrix": {
+      "correction_rework": {
+        "correction_rework": 134,
+        "mild_hesitation": 16,
+        "normal_progress": 13,
+        "overlap_risk": 4,
+        "ready_for_robot_action": 4,
+        "strong_hesitation": 6
+      },
+      "mild_hesitation": {
+        "correction_rework": 164,
+        "mild_hesitation": 20,
+        "normal_progress": 26,
+        "overlap_risk": 6,
+        "ready_for_robot_action": 15,
+        "strong_hesitation": 7
+      },
+      "normal_progress": {
+        "correction_rework": 98,
+        "mild_hesitation": 9,
+        "normal_progress": 9,
+        "overlap_risk": 3,
+        "ready_for_robot_action": 4,
+        "strong_hesitation": 20
+      },
+      "overlap_risk": {
+        "correction_rework": 104,
+        "mild_hesitation": 13,
+        "normal_progress": 14,
+        "overlap_risk": 1,
+        "ready_for_robot_action": 3,
+        "strong_hesitation": 3
+      },
+      "ready_for_robot_action": {
+        "correction_rework": 71,
+        "mild_hesitation": 4,
+        "normal_progress": 5,
+        "overlap_risk": 3,
+        "ready_for_robot_action": 4,
+        "strong_hesitation": 1
+      },
+      "strong_hesitation": {
+        "correction_rework": 103,
+        "mild_hesitation": 16,
+        "normal_progress": 5,
+        "overlap_risk": 1,
+        "ready_for_robot_action": 2,
+        "strong_hesitation": 14
+      }
+    }
+  },
+  "future_hesitation": {
+    "accuracy": 0.92,
+    "precision": 0.918859649122807,
+    "recall": 1.0,
+    "f1": 0.9577142857142857,
+    "auroc": 0.5564151098675005,
+    "auprc": 0.921960091523286,
+    "brier": 0.08757182717228433,
+    "ece": 0.06676113843917848,
+    "confusion": {
+      "tp": 838,
+      "tn": 13,
+      "fp": 74,
+      "fn": 0
+    },
+    "threshold": 0.5
+  },
+  "future_correction": {
+    "accuracy": 0.6627027027027027,
+    "precision": 0.6670467502850627,
+    "recall": 0.9669421487603306,
+    "f1": 0.7894736842105262,
+    "auroc": 0.47054235537190087,
+    "auprc": 0.6250353057701681,
+    "brier": 0.2291526143245413,
+    "ece": 0.09711179949141838,
+    "confusion": {
+      "tp": 585,
+      "tn": 28,
+      "fp": 292,
+      "fn": 20
+    },
+    "threshold": 0.5
+  },
+  "counts": {
+    "train_windows": 1865,
+    "val_windows": 925
+  },
+  "imbalance": {
+    "state_class_weights": [
+      0.05070201265633938,
+      0.048507125007266595,
+      0.05913123959890826,
+      0.05783149319662402,
+      0.07254762501100116,
+      0.0601929265428846
+    ],
+    "future_hes_pos_weight": 1.0,
+    "future_corr_pos_weight": 1.0
+  },
+  "loss_history": [
+    2.8588211067721376,
+    2.7147516674465604
+  ]
+}

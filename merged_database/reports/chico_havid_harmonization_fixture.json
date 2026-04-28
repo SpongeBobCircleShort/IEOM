@@ -1,0 +1,87 @@
+{
+  "datasets": [
+    "chico",
+    "havid"
+  ],
+  "field_coverage": {
+    "timestamp_ms": {
+      "chico": 1.0,
+      "havid": 1.0,
+      "gap": 0.0
+    },
+    "hand_left": {
+      "chico": 1.0,
+      "havid": 1.0,
+      "gap": 0.0
+    },
+    "hand_right": {
+      "chico": 0.0,
+      "havid": 1.0,
+      "gap": 1.0
+    },
+    "pose_confidence": {
+      "chico": 1.0,
+      "havid": 1.0,
+      "gap": 0.0
+    },
+    "task_step": {
+      "chico": 1.0,
+      "havid": 1.0,
+      "gap": 0.0
+    },
+    "action_label_raw": {
+      "chico": 1.0,
+      "havid": 1.0,
+      "gap": 0.0
+    },
+    "canonical_action_label": {
+      "chico": 1.0,
+      "havid": 1.0,
+      "gap": 0.0
+    },
+    "human_robot_distance": {
+      "chico": 1.0,
+      "havid": 1.0,
+      "gap": 0.0
+    },
+    "tool": {
+      "chico": 0.0,
+      "havid": 0.6923076923076923,
+      "gap": 0.6923076923076923
+    },
+    "manipulated_object": {
+      "chico": 0.0,
+      "havid": 1.0,
+      "gap": 1.0
+    }
+  },
+  "label_distribution": {
+    "chico": {
+      "mild_hesitation": 8,
+      "normal_progress": 101,
+      "correction_rework": 3
+    },
+    "havid": {
+      "mild_hesitation": 8,
+      "normal_progress": 92,
+      "correction_rework": 4
+    }
+  },
+  "trigger_distribution": {
+    "chico": {
+      "micro_stop_or_pause": 8,
+      "default_normal": 101,
+      "native_rework": 3
+    },
+    "havid": {
+      "micro_stop_or_pause": 8,
+      "default_normal": 92,
+      "native_rework": 4
+    }
+  },
+  "transfer_issues": [
+    "coverage_gap:hand_right:1.00",
+    "coverage_gap:tool:0.69",
+    "coverage_gap:manipulated_object:1.00"
+  ]
+}

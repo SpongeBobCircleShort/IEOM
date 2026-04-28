@@ -1,0 +1,229 @@
+{
+  "backend": "torch",
+  "current_state_deep": {
+    "accuracy": 0.3505494505494505,
+    "macro_f1": 0.16787165938009996,
+    "per_class": {
+      "correction_rework": {
+        "precision": 0.45962732919254656,
+        "recall": 0.8361581920903954,
+        "f1": 0.5931863727454909
+      },
+      "mild_hesitation": {
+        "precision": 0.29081632653061223,
+        "recall": 0.7184873949579832,
+        "f1": 0.41404358353510895
+      },
+      "normal_progress": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "overlap_risk": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "ready_for_robot_action": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "strong_hesitation": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "confusion_matrix": {
+      "correction_rework": {
+        "correction_rework": 148,
+        "mild_hesitation": 29,
+        "normal_progress": 0,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      },
+      "mild_hesitation": {
+        "correction_rework": 67,
+        "mild_hesitation": 171,
+        "normal_progress": 0,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      },
+      "normal_progress": {
+        "correction_rework": 9,
+        "mild_hesitation": 119,
+        "normal_progress": 0,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      },
+      "overlap_risk": {
+        "correction_rework": 12,
+        "mild_hesitation": 126,
+        "normal_progress": 0,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      },
+      "ready_for_robot_action": {
+        "correction_rework": 7,
+        "mild_hesitation": 81,
+        "normal_progress": 0,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      },
+      "strong_hesitation": {
+        "correction_rework": 79,
+        "mild_hesitation": 62,
+        "normal_progress": 0,
+        "overlap_risk": 0,
+        "ready_for_robot_action": 0,
+        "strong_hesitation": 0
+      }
+    }
+  },
+  "current_state_rules": {
+    "accuracy": 0.2,
+    "macro_f1": 0.1281975279391863,
+    "per_class": {
+      "correction_rework": {
+        "precision": 0.19881305637982197,
+        "recall": 0.7570621468926554,
+        "f1": 0.3149236192714454
+      },
+      "mild_hesitation": {
+        "precision": 0.2564102564102564,
+        "recall": 0.08403361344537816,
+        "f1": 0.12658227848101264
+      },
+      "normal_progress": {
+        "precision": 0.125,
+        "recall": 0.0703125,
+        "f1": 0.09
+      },
+      "overlap_risk": {
+        "precision": 0.05555555555555555,
+        "recall": 0.007246376811594203,
+        "f1": 0.01282051282051282
+      },
+      "ready_for_robot_action": {
+        "precision": 0.125,
+        "recall": 0.045454545454545456,
+        "f1": 0.06666666666666667
+      },
+      "strong_hesitation": {
+        "precision": 0.3888888888888889,
+        "recall": 0.09929078014184398,
+        "f1": 0.15819209039548024
+      }
+    },
+    "confusion_matrix": {
+      "correction_rework": {
+        "correction_rework": 134,
+        "mild_hesitation": 16,
+        "normal_progress": 13,
+        "overlap_risk": 4,
+        "ready_for_robot_action": 4,
+        "strong_hesitation": 6
+      },
+      "mild_hesitation": {
+        "correction_rework": 164,
+        "mild_hesitation": 20,
+        "normal_progress": 26,
+        "overlap_risk": 6,
+        "ready_for_robot_action": 15,
+        "strong_hesitation": 7
+      },
+      "normal_progress": {
+        "correction_rework": 98,
+        "mild_hesitation": 9,
+        "normal_progress": 9,
+        "overlap_risk": 3,
+        "ready_for_robot_action": 4,
+        "strong_hesitation": 5
+      },
+      "overlap_risk": {
+        "correction_rework": 104,
+        "mild_hesitation": 13,
+        "normal_progress": 14,
+        "overlap_risk": 1,
+        "ready_for_robot_action": 3,
+        "strong_hesitation": 3
+      },
+      "ready_for_robot_action": {
+        "correction_rework": 71,
+        "mild_hesitation": 4,
+        "normal_progress": 5,
+        "overlap_risk": 3,
+        "ready_for_robot_action": 4,
+        "strong_hesitation": 1
+      },
+      "strong_hesitation": {
+        "correction_rework": 103,
+        "mild_hesitation": 16,
+        "normal_progress": 5,
+        "overlap_risk": 1,
+        "ready_for_robot_action": 2,
+        "strong_hesitation": 14
+      }
+    }
+  },
+  "future_hesitation": {
+    "accuracy": 0.9208791208791208,
+    "precision": 0.9208791208791208,
+    "recall": 1.0,
+    "f1": 0.9588100686498856,
+    "auroc": 0.45409042694245555,
+    "auprc": 0.9085748689601476,
+    "brier": 0.07429820875270571,
+    "ece": 0.03242050959513734,
+    "confusion": {
+      "tp": 838,
+      "tn": 0,
+      "fp": 72,
+      "fn": 0
+    },
+    "threshold": 0.5
+  },
+  "future_correction": {
+    "accuracy": 0.6648351648351648,
+    "precision": 0.6648351648351648,
+    "recall": 1.0,
+    "f1": 0.7986798679867987,
+    "auroc": 0.45685408481235573,
+    "auprc": 0.6431786113879998,
+    "brier": 0.22691294624406794,
+    "ece": 0.06966031560531023,
+    "confusion": {
+      "tp": 605,
+      "tn": 0,
+      "fp": 305,
+      "fn": 0
+    },
+    "threshold": 0.5
+  },
+  "counts": {
+    "train_windows": 1820,
+    "val_windows": 910
+  },
+  "imbalance": {
+    "state_class_weights": [
+      0.050898659855928764,
+      0.04873701788285793,
+      0.06350006350009525,
+      0.05783149319662402,
+      0.07254762501100116,
+      0.0601929265428846
+    ],
+    "future_hes_pos_weight": 1.0,
+    "future_corr_pos_weight": 1.0
+  },
+  "loss_history": [
+    2.821272036485505,
+    2.706058096467403
+  ]
+}

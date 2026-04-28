@@ -1,0 +1,7 @@
+true_label,correction_rework,mild_hesitation,normal_progress,overlap_risk,ready_for_robot_action,strong_hesitation
+correction_rework,101,75,1,0,0,0
+mild_hesitation,148,90,0,0,0,0
+normal_progress,62,66,0,0,0,0
+overlap_risk,65,73,0,0,0,0
+ready_for_robot_action,42,46,0,0,0,0
+strong_hesitation,81,60,0,0,0,0

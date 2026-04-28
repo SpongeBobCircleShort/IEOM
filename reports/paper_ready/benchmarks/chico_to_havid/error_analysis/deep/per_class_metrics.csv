@@ -1,0 +1,7 @@
+class_name,precision,recall,f1
+correction_rework,0.0,0.0,0.0
+mild_hesitation,0.0,0.0,0.0
+normal_progress,0.14065934065934066,1.0,0.24662813102119463
+overlap_risk,0.0,0.0,0.0
+ready_for_robot_action,0.0,0.0,0.0
+strong_hesitation,0.0,0.0,0.0

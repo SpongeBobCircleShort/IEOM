@@ -1,0 +1,15 @@
+{
+  "run": "chico_within",
+  "display_name": "CHICO train/test",
+  "train_datasets": [
+    "chico"
+  ],
+  "eval_datasets": [
+    "chico"
+  ],
+  "feature_indices": null,
+  "frame_feature_indices": null,
+  "horizon_frames": 5,
+  "row_overrides": null,
+  "notes": []
+}

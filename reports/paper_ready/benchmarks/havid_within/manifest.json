@@ -1,0 +1,15 @@
+{
+  "run": "havid_within",
+  "display_name": "HA-ViD train/test",
+  "train_datasets": [
+    "ha_vid"
+  ],
+  "eval_datasets": [
+    "ha_vid"
+  ],
+  "feature_indices": null,
+  "frame_feature_indices": null,
+  "horizon_frames": 5,
+  "row_overrides": null,
+  "notes": []
+}

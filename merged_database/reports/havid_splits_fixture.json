@@ -1,0 +1,18 @@
+{
+  "within_dataset": {
+    "train": [
+      "hv_s0",
+      "hv_s1"
+    ],
+    "val": [
+      "hv_s2"
+    ],
+    "test": [
+      "hv_s3"
+    ]
+  },
+  "cross_dataset": {
+    "source_dataset": "havid",
+    "target_dataset": "other"
+  }
+}
