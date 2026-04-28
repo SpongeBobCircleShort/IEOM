@@ -1,0 +1,16 @@
+{
+  "dataset_name": "chico",
+  "missing_timestamps": 0,
+  "duplicate_frames": 0,
+  "non_monotonic_frames": 0,
+  "impossible_coordinates": 0,
+  "low_confidence_pose": 0,
+  "label_conflicts": 0,
+  "missingness": {
+    "timestamp_ms": 0.0,
+    "hand_left": 0.0,
+    "pose_confidence": 0.0,
+    "task_step": 0.0,
+    "human_robot_distance": 0.0
+  }
+}

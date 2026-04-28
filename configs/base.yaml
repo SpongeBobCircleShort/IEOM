@@ -1,0 +1,9 @@
+{
+  "seed": 7,
+  "frame_rate_hz": 10,
+  "prediction_horizon_s": 2.0,
+  "paths": {
+    "synthetic_output": "data/synth.jsonl",
+    "baseline_output": "data/predictions.jsonl"
+  }
+}

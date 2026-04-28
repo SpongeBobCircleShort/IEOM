@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  unit-fast:
+  repo-integrity:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,14 +47,6 @@ jobs:
               raise SystemExit(f"missing required files: {missing}")
           print(f"validated {len(required)} required files")
           PY
-
-  unit-deep:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
       - name: Validate simulation inventory and data payloads
         run: |
           python - <<'PY'
@@ -86,3 +78,34 @@ jobs:
               f"{len(data_files)} CSV payloads, and {len(pngs)} figures"
           )
           PY
+
+  unit-fast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev,serve]"
+      - run: python -c "import hesitation; print(hesitation.__file__)"
+      - run: pytest -q -m "not deep"
+
+  unit-deep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev,serve]"
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch==2.7.1
+      - run: python -c "import importlib.util; assert importlib.util.find_spec('torch') is not None"
+      - run: python -c "import torch; print(torch.__version__)"
+      - run: pytest -q -m deep
+      - run: python scripts/generate_synthetic_dataset.py --output /tmp/deep_synth.jsonl --n-sessions 8 --seed 17
+      - run: python scripts/phase2_cli.py train-deep --input /tmp/deep_synth.jsonl --output-dir /tmp/deep_artifacts --window-size 15 --horizon-frames 10 --seed 17 --epochs 6 --batch-size 16
+      - run: python scripts/phase2_cli.py evaluate-deep --input /tmp/deep_synth.jsonl --model-path /tmp/deep_artifacts/deep_model.pt --output /tmp/deep_artifacts/deep_eval.json
+      - run: python scripts/phase2_cli.py tune-thresholds --input /tmp/deep_synth.jsonl --model-path /tmp/deep_artifacts/deep_model.pt --output /tmp/deep_artifacts/deep_thresholds.json
+      - run: python scripts/phase2_cli.py evaluate-deep-calibrated --input /tmp/deep_synth.jsonl --model-path /tmp/deep_artifacts/deep_model.pt --threshold-path /tmp/deep_artifacts/deep_thresholds.json --output /tmp/deep_artifacts/deep_eval_calibrated.json
