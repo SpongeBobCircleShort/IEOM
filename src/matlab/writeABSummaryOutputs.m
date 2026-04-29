@@ -31,6 +31,7 @@ function summary = writeABSummaryOutputs(config, run_dir, episode_metrics, pairw
     if config.enable_plots
         renderCompletionTimeBoxplot(fullfile(run_dir, 'completion_time_boxplot.png'), episode_metrics);
         renderSafetyEventsBar(fullfile(run_dir, 'safety_events_bar.png'), episode_metrics);
+        renderHesitationEventsBar(fullfile(run_dir, 'hesitation_events_bar.png'), episode_metrics);
         renderWaitTimeTradeoffBar(fullfile(run_dir, 'wait_time_tradeoff_bar.png'), episode_metrics);
         renderResponseLatencyBar(fullfile(run_dir, 'response_latency_bar.png'), episode_metrics);
     end
@@ -101,6 +102,7 @@ function summary_rows = summarizeScenarioPolicy(episode_metrics)
         'completion_time_sec', ...
         'overlap_event_count', ...
         'unsafe_close_call_count', ...
+        'hesitation_event_count', ...
         'robot_wait_time_sec', ...
         'human_wait_time_sec', ...
         'response_latency_sec'};
@@ -153,6 +155,12 @@ function text = buildSummaryText(episode_metrics, pairwise_deltas)
             mean([subset.delta_robot_wait_time_sec])); %#ok<AGROW>
     end
 
+    zero_safety_nonzero_hesitation = episode_metrics(([episode_metrics.overlap_event_count] + [episode_metrics.unsafe_close_call_count]) == 0 & ...
+        [episode_metrics.hesitation_event_count] > 0);
+    if ~isempty(zero_safety_nonzero_hesitation)
+        lines{end + 1} = sprintf('warning=found_%d_episodes_with_zero_safety_events_but_nonzero_hesitation_events', numel(zero_safety_nonzero_hesitation)); %#ok<AGROW>
+    end
+
     text = strjoin(lines, newline);
 end
 
@@ -192,6 +200,27 @@ function renderSafetyEventsBar(file_path, episode_metrics)
     bar(categorical(scenarios), [unsafe_a, unsafe_b]);
     ylabel('Mean Unsafe Close Calls');
     legend({'A', 'B'}, 'Location', 'best');
+    saveas(gcf, file_path);
+    close(gcf);
+end
+
+function renderHesitationEventsBar(file_path, episode_metrics)
+    scenarios = unique({episode_metrics.scenario_name});
+    hes_a = zeros(numel(scenarios), 1);
+    hes_b = zeros(numel(scenarios), 1);
+
+    for idx = 1:numel(scenarios)
+        subset_a = episode_metrics(strcmp({episode_metrics.scenario_name}, scenarios{idx}) & strcmp({episode_metrics.policy_name}, 'A'));
+        subset_b = episode_metrics(strcmp({episode_metrics.scenario_name}, scenarios{idx}) & strcmp({episode_metrics.policy_name}, 'B'));
+        hes_a(idx) = mean([subset_a.hesitation_event_count]);
+        hes_b(idx) = mean([subset_b.hesitation_event_count]);
+    end
+
+    figure('Visible', 'off');
+    bar(categorical(scenarios), [hes_a, hes_b]);
+    ylabel('Mean Hesitation Onset Events');
+    legend({'A', 'B'}, 'Location', 'best');
+    title('Hesitation Event Frequency by Scenario and Policy');
     saveas(gcf, file_path);
     close(gcf);
 end

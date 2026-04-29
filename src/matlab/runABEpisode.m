@@ -52,7 +52,7 @@ function [episode_summary, frame_log] = runABEpisode(policy_name, schedule, conf
             first_intervention_time = sim.time_sec;
         end
 
-        frame_log(frame_idx) = buildFrameRow(sim, schedule, features, prediction);
+        frame_log(frame_idx) = buildFrameRow(sim, schedule, features, prediction, event_flags);
 
         if strcmp(sim.human.state, 'done') && sim.robot.completed
             frame_log = frame_log(1:frame_idx);
@@ -228,7 +228,7 @@ function sim = updateInteraction(sim, schedule, config)
     end
 end
 
-function row = buildFrameRow(sim, schedule, features, prediction)
+function row = buildFrameRow(sim, schedule, features, prediction, event_flags)
     row = initialFrameStruct();
     row.scenario_name = sim.scenario_name;
     row.seed = schedule.seed;
@@ -262,6 +262,7 @@ function row = buildFrameRow(sim, schedule, features, prediction)
     row.emergency_active = double(strcmp(sim.robot.mode, 'emergency_stop'));
     row.human_speed = norm(sim.human.vel_xy);
     row.human_progress_01 = sim.human.progress_01;
+    row.hesitation_onset = double(event_flags.hesitation_onset);
 end
 
 function row = initialFrameStruct()
@@ -297,7 +298,8 @@ function row = initialFrameStruct()
         'policy_intervention_active', 0, ...
         'emergency_active', 0, ...
         'human_speed', 0.0, ...
-        'human_progress_01', 0.0);
+        'human_progress_01', 0.0, ...
+        'hesitation_onset', 0);
 end
 
 function pos_xy = clampToBounds(pos_xy, bounds_xy)
