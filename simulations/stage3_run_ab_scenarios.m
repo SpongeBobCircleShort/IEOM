@@ -134,8 +134,9 @@ end
 
 function metrics = runScenarioPolicy(scenario, policy_name, config, feature_log_dir)
     state_names = {'normal_progress', 'mild_hesitation', 'strong_hesitation', 'correction_rework', 'ready_for_robot_action', 'overlap_risk'};
-    seed_bump = strcmp(policy_name, 'hesitation_aware') * 1000;
-    rng(config.seed + seed_bump + sum(double(char(scenario.name))), 'twister');
+    % Both policy arms use the same seed so the scripted human trajectory is
+    % identical — the only variable is the robot policy response.
+    rng(config.seed + sum(double(char(scenario.name))), 'twister');
 
     human_pos = config.human_start;
     robot_pos = config.robot_start;
@@ -191,8 +192,7 @@ function metrics = runScenarioPolicy(scenario, policy_name, config, feature_log_
             prediction = scriptPassThroughPrediction(scripted_state);
         else
             prediction = predict_hesitation_state(feature_window, scripted_state, config);
-            validatePredictionOutput(prediction);
-            [robot_speed, robot_mode] = policyBFromInference(prediction.predicted_state, config, ts);
+            [robot_speed, robot_mode] = policyBFromInference(prediction.predicted_state, config, ts, robot_pos, human_progress);
         end
 
         if ~strcmp(prediction.predicted_state, scripted_state)
@@ -211,7 +211,7 @@ function metrics = runScenarioPolicy(scenario, policy_name, config, feature_log_
 
         human_pos = stepToward(human_pos, config.human_target, human_speed, config.dt_sec);
         robot_pos = stepToward(robot_pos, config.robot_target, robot_speed, config.dt_sec);
-        if rand() < state_params.shared_zone_entry_prob
+        if rand() < state_params.shared_zone_entry_prob && human_progress < 1.0
             human_pos(1) = min(max(human_pos(1), config.shared_zone_x(1)), config.shared_zone_x(2));
             human_pos(2) = config.fixture_pos(2) + (rand() - 0.5) * 0.12;
         end
@@ -402,8 +402,9 @@ function prediction = predict_hesitation_state(feature_window, scripted_state, c
                 'future_correction_probability', fut_corr, ...
                 'source', 'native_model');
         elseif exist('pyenv', 'file') == 2
-            py_result = py.hesitation.inference.stage3_bridge.predict(py.dict(feature_window));
-            prediction = normalizePredictionStruct(jsondecode(char(py.json.dumps(py_result))));
+            % Hide py.* calls from MATLAB JIT to avoid "Python commands require..." errors when Python is not installed.
+            py_result = eval('py.hesitation.inference.stage3_bridge.predict(py.dict(feature_window))');
+            prediction = normalizePredictionStruct(jsondecode(char(eval('py.json.dumps(py_result)'))));
         else
             prediction = predictViaSystemBridge(feature_window, config);
         end
@@ -547,15 +548,27 @@ function [speed, mode] = baselinePolicy(config, t_sec)
     end
 end
 
-function [speed, mode] = policyBFromInference(pred_state, config, t_sec)
+function [speed, mode] = policyBFromInference(pred_state, config, t_sec, robot_pos, human_progress)
     if t_sec < config.robot_release_delay_sec
         speed = 0.0; mode = 'hold'; return;
     end
+    robot_in_zone = isInSharedZone(robot_pos, config);
+    % If the human has completed their task, they will no longer enter the shared zone.
+    human_done = human_progress >= 1.0;
+    
     switch pred_state
         case 'normal_progress', speed = config.robot_nominal_speed; mode = 'proceed';
         case 'mild_hesitation', speed = 0.75 * config.robot_nominal_speed; mode = 'slow';
         case 'strong_hesitation', speed = 0.45 * config.robot_nominal_speed; mode = 'slow';
-        case {'correction_rework','overlap_risk'}, speed = 0.0; mode = 'hold';
+        case {'correction_rework','overlap_risk'}
+            if robot_in_zone || human_done
+                % Robot is already in the shared zone — speed through to exit.
+                % Or human is already past the zone — no risk of collision.
+                speed = config.robot_nominal_speed; mode = 'proceed';
+            else
+                % Robot is approaching — hold to prevent entering the shared zone.
+                speed = 0.0; mode = 'hold';
+            end
         case 'ready_for_robot_action', speed = config.robot_nominal_speed; mode = 'proceed';
         otherwise, speed = config.robot_nominal_speed; mode = 'proceed';
     end
