@@ -8,6 +8,13 @@ function metrics = computeABEpisodeMetrics(frame_log, schedule, config)
     simultaneous_shared = [frame_log.simultaneous_shared_zone];
     overlap_events = countTransitions(simultaneous_shared);
     unsafe_events = countTransitions([frame_log.emergency_active]);
+    hesitation_events_from_states = countHesitationOnsets(human_states);
+    hesitation_events = hesitation_events_from_states;
+    hesitation_events_from_flags = NaN;
+    if isfield(frame_log, 'hesitation_onset')
+        hesitation_events_from_flags = sum([frame_log.hesitation_onset] > 0.5);
+        hesitation_events = hesitation_events_from_flags;
+    end
 
     metrics = struct( ...
         'scenario_name', schedule.scenario_name, ...
@@ -28,9 +35,31 @@ function metrics = computeABEpisodeMetrics(frame_log, schedule, config)
         'human_rework_count', max([frame_log.retry_count]), ...
         'mild_hesitation_time_sec', sum(strcmp(human_states, 'mild_hesitation')) * config.dt_sec, ...
         'strong_hesitation_time_sec', sum(strcmp(human_states, 'strong_hesitation')) * config.dt_sec, ...
+        'hesitation_event_count', hesitation_events, ...
+        'hesitation_event_count_from_states', hesitation_events_from_states, ...
+        'hesitation_event_count_consistent', double(isnan(hesitation_events_from_flags) || hesitation_events_from_flags == hesitation_events_from_states), ...
         'response_latency_sec', NaN, ...
         'mean_robot_speed_scale', mean(robot_speed_scale), ...
         'shared_zone_simultaneous_frames', sum(simultaneous_shared));
+end
+
+function count = countHesitationOnsets(human_states)
+    if isempty(human_states)
+        count = 0;
+        return;
+    end
+
+    hesitation_states = {'mild_hesitation', 'strong_hesitation', 'correction_rework'};
+    count = 0;
+    previous_hesitating = false;
+
+    for idx = 1:numel(human_states)
+        current_hesitating = any(strcmp(human_states{idx}, hesitation_states));
+        if current_hesitating && ~previous_hesitating
+            count = count + 1;
+        end
+        previous_hesitating = current_hesitating;
+    end
 end
 
 function count = countTransitions(flag_values)
