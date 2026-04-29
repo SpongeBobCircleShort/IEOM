@@ -5,7 +5,11 @@ function summary = writeABSummaryOutputs(config, run_dir, episode_metrics, pairw
         mkdir(run_dir);
     end
 
-    config_json = jsonencode(config, 'PrettyPrint', true);
+    if exist('OCTAVE_VERSION', 'builtin')
+        config_json = jsonencode(config);
+    else
+        config_json = jsonencode(config, 'PrettyPrint', true);
+    end
     writeTextFile(fullfile(run_dir, 'run_config.json'), config_json);
 
     writeStructCsv(fullfile(run_dir, 'episode_metrics.csv'), episode_metrics);
@@ -31,7 +35,7 @@ function summary = writeABSummaryOutputs(config, run_dir, episode_metrics, pairw
         renderResponseLatencyBar(fullfile(run_dir, 'response_latency_bar.png'), episode_metrics);
     end
 
-    if ~isempty(representative_timeline)
+    if config.enable_plots && ~isempty(representative_timeline)
         renderRepresentativeTimeline(fullfile(run_dir, 'representative_timeline.png'), representative_timeline);
     end
 end
@@ -57,8 +61,12 @@ function writeStructCsv(file_path, rows)
 end
 
 function value = encodeCsvValue(raw_value)
-    if ischar(raw_value) || isstring(raw_value)
-        text = char(string(raw_value));
+    if ischar(raw_value)
+        text = raw_value;
+        text = strrep(text, '"', '""');
+        value = ['"', text, '"'];
+    elseif exist('isstring', 'builtin') && isstring(raw_value)
+        text = char(raw_value);
         text = strrep(text, '"', '""');
         value = ['"', text, '"'];
     elseif isnumeric(raw_value) || islogical(raw_value)

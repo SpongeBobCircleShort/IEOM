@@ -41,12 +41,16 @@ def main() -> int:
     # Predict command
     predict_parser = subparsers.add_parser("predict", help="Make a single prediction")
     predict_parser.add_argument("--mean-hand-speed", type=float, required=True)
+    predict_parser.add_argument("--speed-variance", type=float, default=None)
     predict_parser.add_argument("--pause-ratio", type=float, required=True)
     predict_parser.add_argument("--progress-delta", type=float, required=True)
+    predict_parser.add_argument("--direction-changes", type=int, default=None)
     predict_parser.add_argument("--reversal-count", type=int, required=True)
+    predict_parser.add_argument("--backtrack-ratio", type=float, default=None)
     predict_parser.add_argument("--retry-count", type=int, required=True)
     predict_parser.add_argument("--task-step-id", type=int, required=True)
     predict_parser.add_argument("--human-robot-distance", type=float, required=True)
+    predict_parser.add_argument("--mean-workspace-distance", type=float, default=None)
 
     # Health check command
     subparsers.add_parser("health", help="Check if model is loaded")
@@ -73,12 +77,19 @@ def main() -> int:
 
     if args.command == "predict":
         features = {
+            "mean_speed": args.mean_hand_speed,
             "mean_hand_speed": args.mean_hand_speed,
+            "speed_variance": args.speed_variance if args.speed_variance is not None else 0.0,
             "pause_ratio": args.pause_ratio,
             "progress_delta": args.progress_delta,
+            "direction_changes": args.direction_changes if args.direction_changes is not None else args.reversal_count,
             "reversal_count": args.reversal_count,
+            "backtrack_ratio": args.backtrack_ratio if args.backtrack_ratio is not None else min(args.retry_count, 1),
             "retry_count": args.retry_count,
             "task_step_id": args.task_step_id,
+            "mean_workspace_distance": (
+                args.mean_workspace_distance if args.mean_workspace_distance is not None else args.human_robot_distance
+            ),
             "human_robot_distance": args.human_robot_distance,
         }
 

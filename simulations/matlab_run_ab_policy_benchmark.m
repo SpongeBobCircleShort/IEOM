@@ -1,7 +1,7 @@
 function summary = matlab_run_ab_policy_benchmark(varargin)
 % matlab_run_ab_policy_benchmark: Run paired A/B MATLAB benchmark and write outputs.
 
-    repo_root = fileparts(mfilename('fullpath'));
+    repo_root = fileparts(fileparts(mfilename('fullpath')));
     addpath(fullfile(repo_root, 'src', 'matlab'));
 
     config = buildABConfig(varargin{:});

@@ -60,18 +60,22 @@ def test_feature_vector_conversion():
     """Test feature dict to vector conversion."""
     features = {
         "mean_hand_speed": 0.5,
+        "speed_variance": 0.02,
         "pause_ratio": 0.1,
         "progress_delta": 0.8,
         "reversal_count": 1,
-        "retry_count": 0,
+        "backtrack_ratio": 0.25,
         "task_step_id": 2,
         "human_robot_distance": 0.3,
     }
     vector = HesitationPredictor._dict_to_vector(features)
     assert len(vector) == 7
-    assert vector[0] == 0.5  # mean_hand_speed
-    assert vector[1] == 0.1  # pause_ratio
-    assert vector[6] == 0.3  # human_robot_distance
+    assert vector[0] == 0.5  # mean_speed from legacy mean_hand_speed
+    assert vector[1] == 0.02  # speed_variance
+    assert vector[2] == 0.1  # pause_ratio
+    assert vector[3] == 1  # direction_changes from legacy reversal_count
+    assert vector[5] == 0.25  # backtrack_ratio
+    assert vector[6] == 0.3  # mean_workspace_distance from legacy human_robot_distance
 
 
 def test_load_default():
