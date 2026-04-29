@@ -6,14 +6,26 @@ function summary = stage3_run_ab_scenarios(varargin)
     output_root = fullfile(root_dir, 'artifacts', 'simulink_stage3');
     dirs = ensureStage3Dirs(output_root);
 
-    scenarios = buildStage3Scenarios();
+    envs = buildStage3Environments();
     config = buildStage3Config(opts, root_dir);
 
     baseline_rows = struct([]);
     aware_rows = struct([]);
-    for s = 1:numel(scenarios)
-        baseline_rows(s) = runScenarioPolicy(scenarios{s}, 'baseline', config, dirs.feature_logs); %#ok<AGROW>
-        aware_rows(s) = runScenarioPolicy(scenarios{s}, 'hesitation_aware', config, dirs.feature_logs); %#ok<AGROW>
+    for s = 1:numel(envs)
+        env = envs{s};
+        env_config = config;
+        if isfield(env, 'shared_zone_x'), env_config.shared_zone_x = env.shared_zone_x; end
+        if isfield(env, 'overlap_buffer'), env_config.overlap_buffer = env.overlap_buffer; end
+        
+        b_res = runScenarioPolicy(env, 'baseline', env_config, dirs.feature_logs);
+        a_res = runScenarioPolicy(env, 'hesitation_aware', env_config, dirs.feature_logs);
+        if isempty(baseline_rows)
+            baseline_rows = b_res;
+            aware_rows = a_res;
+        else
+            baseline_rows(s) = b_res; %#ok<AGROW>
+            aware_rows(s) = a_res; %#ok<AGROW>
+        end
     end
 
     baseline_tbl = struct2table(baseline_rows);
@@ -28,13 +40,15 @@ function summary = stage3_run_ab_scenarios(varargin)
     writetable(summary_tbl, fullfile(dirs.tables, 'statistical_summary.csv'));
     writetable(safety_tbl, fullfile(dirs.reports, 'safety_checks.csv'));
 
-    replay_tbl = runReplayValidation(scenarios, config, dirs);
+    replay_tbl = runReplayValidation(envs, config, dirs);
     writetable(replay_tbl, fullfile(dirs.reports, 'replay_validation.csv'));
 
     renderStage3Figures(dirs.figures, comparison_tbl, aware_tbl);
 
     summary = struct( ...
         'output_root', output_root, ...
+        'feature_log_dir', dirs.feature_logs, ...
+        'scenario_names', {cellfun(@(x) x.name, envs, 'UniformOutput', false)}, ...
         'baseline_metrics', baseline_tbl, ...
         'hesitation_aware_metrics', aware_tbl, ...
         'comparison', comparison_tbl, ...
@@ -96,14 +110,25 @@ function config = buildStage3Config(opts, root_dir)
     config.bridge_script = fullfile(root_dir, 'scripts', 'simulink_stage3_predict.py');
     config.max_hold_ratio = 0.65;
     config.max_oscillation_ratio = 0.40;
+
+    % Load the trained classical model
+    model_path = fullfile(root_dir, 'simulations', 'classical_model.json');
+    if exist(model_path, 'file')
+        raw_json = fileread(model_path);
+        config.trained_model = jsondecode(raw_json);
+    else
+        warning('Stage3:ModelNotFound', 'Could not find classical_model.json in simulations directory.');
+        config.trained_model = [];
+    end
 end
 
-function scenarios = buildStage3Scenarios()
-    scenarios = {
-        struct('name', 'smooth_operator', 'weights', [0.55, 0.10, 0.05, 0.05, 0.20, 0.05], 'task_step_count', 6), ...
-        struct('name', 'hesitation_heavy_operator', 'weights', [0.20, 0.30, 0.25, 0.10, 0.10, 0.05], 'task_step_count', 6), ...
-        struct('name', 'correction_heavy_operator', 'weights', [0.20, 0.15, 0.10, 0.40, 0.10, 0.05], 'task_step_count', 6), ...
-        struct('name', 'overlap_risk_operator', 'weights', [0.20, 0.15, 0.10, 0.05, 0.15, 0.35], 'task_step_count', 6) ...
+function envs = buildStage3Environments()
+    envs = {
+        struct('name', 'low_conflict_open', 'weights', [0.70, 0.05, 0.05, 0.05, 0.10, 0.05], 'task_step_count', 6, 'shared_zone_x', [0.45, 0.55], 'overlap_buffer', 0.05, 'conflict_level', 'low'), ...
+        struct('name', 'narrow_assembly_bench', 'weights', [0.40, 0.15, 0.10, 0.05, 0.10, 0.20], 'task_step_count', 6, 'shared_zone_x', [0.30, 0.70], 'overlap_buffer', 0.10, 'conflict_level', 'high'), ...
+        struct('name', 'precision_insertion', 'weights', [0.20, 0.25, 0.25, 0.15, 0.10, 0.05], 'task_step_count', 6, 'shared_zone_x', [0.48, 0.52], 'overlap_buffer', 0.15, 'conflict_level', 'high'), ...
+        struct('name', 'inspection_rework', 'weights', [0.20, 0.10, 0.10, 0.40, 0.10, 0.10], 'task_step_count', 6, 'shared_zone_x', [0.40, 0.60], 'overlap_buffer', 0.08, 'conflict_level', 'high'), ...
+        struct('name', 'shared_bin_access', 'weights', [0.20, 0.10, 0.05, 0.10, 0.15, 0.40], 'task_step_count', 6, 'shared_zone_x', [0.35, 0.65], 'overlap_buffer', 0.12, 'conflict_level', 'high') ...
     };
 end
 
@@ -118,7 +143,7 @@ function metrics = runScenarioPolicy(scenario, policy_name, config, feature_log_
     robot_progress = 0.0;
 
     history = initializeFeatureHistory();
-    log_rows = struct([]);
+    log_rows = cell(config.max_steps, 1);
 
     robot_idle = 0.0;
     human_idle = 0.0;
@@ -202,7 +227,7 @@ function metrics = runScenarioPolicy(scenario, policy_name, config, feature_log_
             overlap_count = overlap_count + 1;
         end
 
-        log_rows(row_idx) = featureLogRow(ts, scenario.name, policy_name, scripted_state, prediction, feature_window, robot_mode, robot_speed); %#ok<AGROW>
+        log_rows{row_idx} = featureLogRow(ts, scenario.name, policy_name, scripted_state, prediction, feature_window, robot_mode, robot_speed);
         row_idx = row_idx + 1;
 
         prev_overlap = overlap_now;
@@ -213,6 +238,7 @@ function metrics = runScenarioPolicy(scenario, policy_name, config, feature_log_
         end
     end
 
+    log_rows = log_rows(1:row_idx-1);
     writeJsonl(fullfile(feature_log_dir, sprintf('%s_%s.jsonl', scenario.name, policy_name)), log_rows);
 
     sim_time = (step_idx - 1) * config.dt_sec;
@@ -237,7 +263,7 @@ function replay_tbl = runReplayValidation(scenarios, config, dirs)
         return;
     end
 
-    rows = struct([]);
+    rows = cell(numel(scenarios)*2, 1);
     idx = 1;
     for s = 1:numel(scenarios)
         for policy = {"baseline", "hesitation_aware"}
@@ -258,20 +284,21 @@ function replay_tbl = runReplayValidation(scenarios, config, dirs)
             end
 
             deterministic = (match_state == numel(log_rows)) && (match_probs == numel(log_rows));
-            rows(idx) = struct( ...
+            rows{idx} = struct( ...
                 'scenario', string(scenarios{s}.name), ...
                 'policy', string(policy_name), ...
                 'rows_replayed', numel(log_rows), ...
                 'state_matches', match_state, ...
                 'probability_matches', match_probs, ...
-                'deterministic', deterministic); %#ok<AGROW>
+                'deterministic', deterministic);
 
-            replay_report = struct2table(rows(idx));
+            replay_report = struct2table(rows{idx});
             writetable(replay_report, fullfile(dirs.replay_logs, sprintf('%s_%s_replay.csv', scenarios{s}.name, policy_name)));
             idx = idx + 1;
         end
     end
-    replay_tbl = struct2table(rows);
+    rows = rows(1:idx-1);
+    replay_tbl = struct2table([rows{:}]);
 end
 
 function comparison_tbl = buildComparisonTable(base, aware)
@@ -286,18 +313,18 @@ end
 
 function stats = buildStatisticalSummary(comparison_tbl)
     metric_names = {'task_completion_time_delta','overlap_risk_event_delta','robot_hold_count_delta','human_wait_time_delta','unnecessary_slowdown_delta'};
-    stats_rows = struct([]);
+    stats_rows = cell(numel(metric_names), 1);
     for i = 1:numel(metric_names)
         m = metric_names{i};
         values = comparison_tbl.(m);
         baseline_mag = max(abs(mean(values)) + eps, 1e-6);
-        stats_rows(i) = struct( ...
+        stats_rows{i} = struct( ...
             'metric', string(m), ...
             'mean_improvement', -mean(values), ...
             'percent_improvement', (-mean(values) / baseline_mag) * 100.0, ...
-            'variance', var(values)); %#ok<AGROW>
+            'variance', var(values));
     end
-    stats = struct2table(stats_rows);
+    stats = struct2table([stats_rows{:}]);
 end
 
 function safety = buildSafetyReport(aware_tbl, config)
@@ -339,7 +366,8 @@ function prediction = scriptPassThroughPrediction(scripted_state)
         'predicted_state', scripted_state, ...
         'state_probabilities', probs, ...
         'future_hesitation_probability', 0.0, ...
-        'future_correction_probability', 0.0);
+        'future_correction_probability', 0.0, ...
+        'source', 'script_passthrough');
 end
 
 function prediction = predict_hesitation_state(feature_window, scripted_state, config)
@@ -350,14 +378,39 @@ function prediction = predict_hesitation_state(feature_window, scripted_state, c
     end
 
     try
-        if exist('pyenv', 'file') == 2
+        if ~isempty(config.trained_model)
+            % 1. Exact feature vector mapped from feature_window
+            X = [feature_window.mean_speed, feature_window.speed_variance, ...
+                 feature_window.pause_ratio, feature_window.direction_changes, ...
+                 feature_window.progress_delta, feature_window.backtrack_ratio, ...
+                 feature_window.mean_workspace_distance];
+                 
+            [state_prob, fut_hes, fut_corr, classes] = infer_classical(config.trained_model, X);
+            
+            [~, max_idx] = max(state_prob);
+            predicted_state = classes{max_idx};
+            
+            probs = uniformProbs();
+            for i = 1:length(classes)
+                probs.(classes{i}) = state_prob(i);
+            end
+            
+            prediction = struct( ...
+                'predicted_state', predicted_state, ...
+                'state_probabilities', probs, ...
+                'future_hesitation_probability', fut_hes, ...
+                'future_correction_probability', fut_corr, ...
+                'source', 'native_model');
+        elseif exist('pyenv', 'file') == 2
             py_result = py.hesitation.inference.stage3_bridge.predict(py.dict(feature_window));
             prediction = normalizePredictionStruct(jsondecode(char(py.json.dumps(py_result))));
         else
             prediction = predictViaSystemBridge(feature_window, config);
         end
-    catch
-        prediction = predictViaSystemBridge(feature_window, config);
+    catch e
+        warning('Stage3:InferenceFailed', 'Inference failed: %s. Falling back to stub.', e.message);
+        prediction = stubPrediction(feature_window, scripted_state);
+        prediction.source = 'error_fallback';
     end
 end
 
@@ -380,7 +433,8 @@ function prediction = normalizePredictionStruct(raw)
         'predicted_state', char(raw.predicted_state), ...
         'state_probabilities', raw.state_probabilities, ...
         'future_hesitation_probability', double(raw.future_hesitation_probability), ...
-        'future_correction_probability', double(raw.future_correction_probability));
+        'future_correction_probability', double(raw.future_correction_probability), ...
+        'source', 'python_bridge');
 end
 
 function validatePredictionOutput(pred)
@@ -423,6 +477,7 @@ end
 
 function p = stubPrediction(feature_window, scripted_state)
     p = scriptPassThroughPrediction(scripted_state);
+    p.source = 'stub_fallback';
     if feature_window.pause_ratio >= 0.55 || feature_window.shared_zone_occupancy >= 0.80
         p.predicted_state = 'overlap_risk';
     elseif feature_window.retry_count >= 2 || feature_window.progress_delta < 0.002
@@ -451,6 +506,10 @@ function probs = uniformProbs()
 end
 
 function row = featureLogRow(ts, scenario, policy, scripted_state, prediction, feature_window, robot_mode, robot_speed)
+    source_val = 'unknown';
+    if isfield(prediction, 'source')
+        source_val = prediction.source;
+    end
     row = struct( ...
         'timestamp', ts, ...
         'scenario', string(scenario), ...
@@ -460,6 +519,7 @@ function row = featureLogRow(ts, scenario, policy, scripted_state, prediction, f
         'state_probabilities', prediction.state_probabilities, ...
         'future_hesitation_probability', prediction.future_hesitation_probability, ...
         'future_correction_probability', prediction.future_correction_probability, ...
+        'source', string(source_val), ...
         'robot_mode', string(robot_mode), ...
         'robot_speed_cmd', robot_speed, ...
         'feature_window', feature_window);
@@ -607,19 +667,32 @@ end
 function writeJsonl(path, rows)
     fid = fopen(path, 'w'); if fid < 0, error('Cannot write: %s', path); end
     c = onCleanup(@() fclose(fid));
-    for i = 1:numel(rows), fprintf(fid, '%s\n', jsonencode(rows(i))); end
+    if iscell(rows)
+        for i = 1:numel(rows), fprintf(fid, '%s\n', jsonencode(rows{i})); end
+    else
+        for i = 1:numel(rows), fprintf(fid, '%s\n', jsonencode(rows(i))); end
+    end
     clear c;
 end
 
 function rows = readJsonl(path)
     fid = fopen(path, 'r'); if fid < 0, error('Cannot read: %s', path); end
     c = onCleanup(@() fclose(fid));
-    rows = struct([]); idx = 1;
+    raw_rows = cell(1000, 1); idx = 1;
     while true
         ln = fgetl(fid); if ~ischar(ln), break; end
         if isempty(strtrim(ln)), continue; end
-        rows(idx) = jsondecode(ln); %#ok<AGROW>
+        raw_rows{idx} = jsondecode(ln);
         idx = idx + 1;
+        if idx > numel(raw_rows)
+            raw_rows = [raw_rows; cell(1000, 1)]; %#ok<AGROW>
+        end
+    end
+    raw_rows = raw_rows(1:idx-1);
+    if isempty(raw_rows)
+        rows = struct([]);
+    else
+        rows = [raw_rows{:}];
     end
     clear c;
 end

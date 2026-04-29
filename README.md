@@ -215,6 +215,14 @@ python scripts/phase2_cli.py evaluate-deep --input /tmp/ieom_synth.jsonl --model
 % Data exported in CSV format
 ```
 
+### **5. Generating Paper-Ready Benchmark Results**
+```matlab
+% To run the canonical multi-seed A/B benchmark comparing the baseline against the trained classical hesitation model:
+cd simulations
+run('run_paper_benchmark.m')
+% Aggregate tables (CSV) and figures (PNG) will be saved to artifacts/paper_results/
+```
+
 ---
 
 ## 📚 **Documentation**
