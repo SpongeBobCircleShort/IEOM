@@ -377,7 +377,11 @@ end
 
 function replay_tbl = runReplayValidation(scenarios, config, dirs)
     if ~config.enable_replay
-        replay_tbl = struct();
+        if exist('OCTAVE_VERSION', 'builtin')
+            replay_tbl = struct();
+        else
+            replay_tbl = table();
+        end
         return;
     end
 
@@ -457,6 +461,7 @@ function safety = buildSafetyReport(aware_tbl, config)
     safety.excessive_holds = hold_ratio > config.max_hold_ratio;
     safety.excessive_oscillation = oscillation_ratio > config.max_oscillation_ratio;
     safety.invalid_state_outputs = aware_tbl.prediction_mismatch_count < 0;
+    safety = struct2table(safety);
 end
 
 function renderStage3Figures(fig_dir, comparison_tbl, aware_tbl)
