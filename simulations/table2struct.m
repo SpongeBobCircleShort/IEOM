@@ -1,11 +1,14 @@
 function s = table2struct(t, varargin)
-% table2struct  Octave-compatible shim.
-% In our pipeline, struct2table produces a struct-of-columns,
-% and table2struct is called in run_paper_benchmark to convert rows back.
-% We do the inverse: struct-of-columns -> struct array.
+% table2struct  Dual-environment shim.
+%   - MATLAB  : delegates transparently to the built-in via builtin().
+%   - Octave  : provides a hand-written implementation (Octave lacks this
+%               built-in when working with struct-of-columns tables).
   if ~exist('OCTAVE_VERSION', 'builtin')
-    error('table2struct shim called in MATLAB — check your path order.');
+    % MATLAB path: hand off to the real built-in unconditionally.
+    s = builtin('table2struct', t, varargin{:});
+    return;
   end
+  % Octave path: hand-written struct-of-columns -> struct array conversion.
   fn = fieldnames(t);
   if isempty(fn), s = struct([]); return; end
   col1 = t.(fn{1});
