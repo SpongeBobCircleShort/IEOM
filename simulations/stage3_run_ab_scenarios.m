@@ -428,6 +428,7 @@ function comparison_tbl = buildComparisonTable(base, aware)
     comparison_tbl.robot_hold_count_delta = aware.robot_hold_count - base.robot_hold_count;
     comparison_tbl.human_wait_time_delta = aware.human_wait_time_sec - base.human_wait_time_sec;
     comparison_tbl.unnecessary_slowdown_delta = aware.unnecessary_slowdown_count - base.unnecessary_slowdown_count;
+    comparison_tbl = struct2table(comparison_tbl);
 end
 
 function stats = buildStatisticalSummary(comparison_tbl)
