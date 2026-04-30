@@ -20,6 +20,9 @@ function run_sensitivity_analysis()
 %   all 27 parameter combinations.
 
     %% Configuration
+    if exist('OCTAVE_VERSION', 'builtin')
+        addpath(fullfile(fileparts(mfilename('fullpath')), 'octave_shims'));
+    end
     NUM_SEEDS_PER_COMBO = 100;
     rng(99, 'twister');
     seeds = randi([1, 100000], 1, NUM_SEEDS_PER_COMBO);

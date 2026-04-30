@@ -8,6 +8,9 @@ function run_paper_benchmark()
 %     artifacts/paper_results/figures/  (PNG)
 
     %% Configuration
+    if exist('OCTAVE_VERSION', 'builtin')
+        addpath(fullfile(fileparts(mfilename('fullpath')), 'octave_shims'));
+    end
     rng(42, 'twister');                          % reproducible seed list
     NUM_SEEDS   = 500;
     seeds       = randi([1, 100000], 1, NUM_SEEDS);

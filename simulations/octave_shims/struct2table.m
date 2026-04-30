@@ -1,13 +1,6 @@
 function t = struct2table(s)
-% struct2table  Dual-environment shim.
-%   - MATLAB  : delegates transparently to the built-in via builtin().
-%   - Octave  : provides a hand-written implementation (Octave lacks this
-%               built-in; converts a struct array to a struct-of-columns).
-  if ~exist('OCTAVE_VERSION', 'builtin')
-    % MATLAB path: hand off to the real built-in unconditionally.
-    t = builtin('struct2table', s);
-    return;
-  end
+% struct2table  Octave-compatible shim.
+% Converts a struct array into a struct-of-arrays (column per field).
   % Octave path: hand-written struct array -> struct-of-columns conversion.
   if isempty(s)
     t = struct();

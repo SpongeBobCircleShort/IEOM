@@ -1,6 +1,10 @@
 function summary = stage3_run_ab_scenarios(varargin)
 % stage3_run_ab_scenarios: Stage 3 A/B evaluation with real model bridge + replay validation.
 
+    if exist('OCTAVE_VERSION', 'builtin')
+        addpath(fullfile(fileparts(mfilename('fullpath')), 'octave_shims'));
+    end
+
     if nargin == 3 && ischar(varargin{1}) && ischar(varargin{2}) && isnumeric(varargin{3})
         summary = runSinglePolicyDiagnostic(varargin{1}, varargin{2}, varargin{3});
         return;
