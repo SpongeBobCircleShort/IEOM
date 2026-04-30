@@ -128,7 +128,10 @@ function envs = buildStage3Environments()
         struct('name', 'narrow_assembly_bench', 'weights', [0.40, 0.15, 0.10, 0.05, 0.10, 0.20], 'task_step_count', 6, 'shared_zone_x', [0.30, 0.70], 'overlap_buffer', 0.10, 'conflict_level', 'high'), ...
         struct('name', 'precision_insertion', 'weights', [0.20, 0.25, 0.25, 0.15, 0.10, 0.05], 'task_step_count', 6, 'shared_zone_x', [0.48, 0.52], 'overlap_buffer', 0.15, 'conflict_level', 'high'), ...
         struct('name', 'inspection_rework', 'weights', [0.20, 0.10, 0.10, 0.40, 0.10, 0.10], 'task_step_count', 6, 'shared_zone_x', [0.40, 0.60], 'overlap_buffer', 0.08, 'conflict_level', 'high'), ...
-        struct('name', 'shared_bin_access', 'weights', [0.20, 0.10, 0.05, 0.10, 0.15, 0.40], 'task_step_count', 6, 'shared_zone_x', [0.35, 0.65], 'overlap_buffer', 0.12, 'conflict_level', 'high') ...
+        struct('name', 'shared_bin_access', 'weights', [0.20, 0.10, 0.05, 0.10, 0.15, 0.40], 'task_step_count', 6, 'shared_zone_x', [0.35, 0.65], 'overlap_buffer', 0.12, 'conflict_level', 'high'), ...
+        struct('name', 'ghost_proximity', 'weights', [0.10, 0.40, 0.40, 0.00, 0.10, 0.00], 'task_step_count', 6, 'shared_zone_x', [0.45, 0.55], 'overlap_buffer', 0.05, 'conflict_level', 'low'), ...
+        struct('name', 'sensor_occlusion', 'weights', [0.60, 0.10, 0.10, 0.10, 0.10, 0.00], 'task_step_count', 6, 'shared_zone_x', [0.40, 0.60], 'overlap_buffer', 0.15, 'conflict_level', 'high'), ...
+        struct('name', 'flow_state_expert', 'weights', [1.00, 0.00, 0.00, 0.00, 0.00, 0.00], 'task_step_count', 6, 'shared_zone_x', [0.45, 0.55], 'overlap_buffer', 0.05, 'conflict_level', 'low') ...
     };
 end
 
@@ -192,6 +195,7 @@ function metrics = runScenarioPolicy(scenario, policy_name, config, feature_log_
             prediction = scriptPassThroughPrediction(scripted_state);
         else
             prediction = predict_hesitation_state(feature_window, scripted_state, config);
+            
             [robot_speed, robot_mode] = policyBFromInference(prediction.predicted_state, config, ts, robot_pos, human_progress);
         end
 
@@ -211,9 +215,14 @@ function metrics = runScenarioPolicy(scenario, policy_name, config, feature_log_
 
         human_pos = stepToward(human_pos, config.human_target, human_speed, config.dt_sec);
         robot_pos = stepToward(robot_pos, config.robot_target, robot_speed, config.dt_sec);
-        if rand() < state_params.shared_zone_entry_prob && human_progress < 1.0
+        % In ghost_proximity, human stays outside the zone (y=0.30)
+        is_ghost = strcmp(scenario.name, 'ghost_proximity');
+        if rand() < state_params.shared_zone_entry_prob && human_progress < 1.0 && ~is_ghost
             human_pos(1) = min(max(human_pos(1), config.shared_zone_x(1)), config.shared_zone_x(2));
             human_pos(2) = config.fixture_pos(2) + (rand() - 0.5) * 0.12;
+        end
+        if is_ghost
+            human_pos(2) = 0.30;
         end
 
         human_progress = min(1.0, human_progress + state_params.progress_rate * config.dt_sec);
