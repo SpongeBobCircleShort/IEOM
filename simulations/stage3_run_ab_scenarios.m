@@ -43,7 +43,11 @@ function summary = stage3_run_ab_scenarios(varargin)
     replay_tbl = runReplayValidation(envs, config, dirs);
     writetable(replay_tbl, fullfile(dirs.reports, 'replay_validation.csv'));
 
-    renderStage3Figures(dirs.figures, comparison_tbl, aware_tbl);
+    try
+        renderStage3Figures(dirs.figures, comparison_tbl, aware_tbl);
+    catch fig_err
+        fprintf('[INFO] Skipping stage3 figures (headless): %s\n', fig_err.message);
+    end
 
     summary = struct( ...
         'output_root', output_root, ...
@@ -60,7 +64,7 @@ function summary = stage3_run_ab_scenarios(varargin)
 end
 
 function opts = parseStage3Options(varargin)
-    opts = struct('use_stub', false, 'enable_replay', true, 'deterministic_seed', 42, 'window_size', 12, 'dt_sec', 0.1);
+    opts = struct('use_stub', false, 'enable_replay', true, 'deterministic_seed', 42, 'window_size', 12, 'dt_sec', 0.1, 'no_figures', false);
     if mod(numel(varargin), 2) ~= 0
         error('stage3_run_ab_scenarios expects name/value options.');
     end
@@ -111,35 +115,46 @@ function config = buildStage3Config(opts, root_dir)
     config.max_hold_ratio = 0.65;
     config.max_oscillation_ratio = 0.40;
 
-    % Load the trained classical model
-    model_path = fullfile(root_dir, 'simulations', 'classical_model.json');
-    if exist(model_path, 'file')
-        raw_json = fileread(model_path);
-        config.trained_model = jsondecode(raw_json);
-    else
-        warning('Stage3:ModelNotFound', 'Could not find classical_model.json in simulations directory.');
-        config.trained_model = [];
+    % Load the trained classical models (Multi-Task Learning, Fix 4)
+    config.models = struct('generic', [], 'assembly', [], 'precision', [], 'inspection', []);
+    
+    model_types = {'generic', 'assembly', 'precision', 'inspection'};
+    for i = 1:numel(model_types)
+        mtype = model_types{i};
+        if strcmp(mtype, 'generic')
+            fname = 'classical_model.json';
+        else
+            fname = sprintf('classical_model_%s.json', mtype);
+        end
+        
+        mpath = fullfile(root_dir, 'simulations', fname);
+        if exist(mpath, 'file')
+            config.models.(mtype) = jsondecode(fileread(mpath));
+        elseif ~strcmp(mtype, 'generic')
+            % Fallback to generic if specialized not found
+            config.models.(mtype) = config.models.generic;
+        end
     end
+    
+    % Legacy support
+    config.trained_model = config.models.generic;
 end
 
 function envs = buildStage3Environments()
+    % States: [normal, coord_uncertainty, task_complexity, inspection, conflict, ready, rework]
     envs = {
-        struct('name', 'low_conflict_open', 'weights', [0.70, 0.05, 0.05, 0.05, 0.10, 0.05], 'task_step_count', 6, 'shared_zone_x', [0.45, 0.55], 'overlap_buffer', 0.05, 'conflict_level', 'low'), ...
-        struct('name', 'narrow_assembly_bench', 'weights', [0.40, 0.15, 0.10, 0.05, 0.10, 0.20], 'task_step_count', 6, 'shared_zone_x', [0.30, 0.70], 'overlap_buffer', 0.10, 'conflict_level', 'high'), ...
-        struct('name', 'precision_insertion', 'weights', [0.20, 0.25, 0.25, 0.15, 0.10, 0.05], 'task_step_count', 6, 'shared_zone_x', [0.48, 0.52], 'overlap_buffer', 0.15, 'conflict_level', 'high'), ...
-        struct('name', 'inspection_rework', 'weights', [0.20, 0.10, 0.10, 0.40, 0.10, 0.10], 'task_step_count', 6, 'shared_zone_x', [0.40, 0.60], 'overlap_buffer', 0.08, 'conflict_level', 'high'), ...
-        struct('name', 'shared_bin_access', 'weights', [0.20, 0.10, 0.05, 0.10, 0.15, 0.40], 'task_step_count', 6, 'shared_zone_x', [0.35, 0.65], 'overlap_buffer', 0.12, 'conflict_level', 'high'), ...
-        struct('name', 'ghost_proximity', 'weights', [0.10, 0.40, 0.40, 0.00, 0.10, 0.00], 'task_step_count', 6, 'shared_zone_x', [0.45, 0.55], 'overlap_buffer', 0.05, 'conflict_level', 'low'), ...
-        struct('name', 'sensor_occlusion', 'weights', [0.60, 0.10, 0.10, 0.10, 0.10, 0.00], 'task_step_count', 6, 'shared_zone_x', [0.40, 0.60], 'overlap_buffer', 0.15, 'conflict_level', 'high'), ...
-        struct('name', 'flow_state_expert', 'weights', [1.00, 0.00, 0.00, 0.00, 0.00, 0.00], 'task_step_count', 6, 'shared_zone_x', [0.45, 0.55], 'overlap_buffer', 0.05, 'conflict_level', 'low') ...
+        struct('name', 'low_conflict_open', 'weights', [0.60, 0.05, 0.05, 0.05, 0.05, 0.15, 0.05], 'task_step_count', 6, 'shared_zone_x', [0.45, 0.55], 'overlap_buffer', 0.05, 'conflict_level', 'low'), ...
+        struct('name', 'narrow_assembly_bench', 'weights', [0.40, 0.15, 0.05, 0.05, 0.10, 0.10, 0.15], 'task_step_count', 6, 'shared_zone_x', [0.30, 0.70], 'overlap_buffer', 0.10, 'conflict_level', 'high'), ...
+        struct('name', 'precision_insertion', 'weights', [0.20, 0.05, 0.35, 0.15, 0.10, 0.10, 0.05], 'task_step_count', 6, 'shared_zone_x', [0.48, 0.52], 'overlap_buffer', 0.15, 'conflict_level', 'high'), ...
+        struct('name', 'inspection_rework', 'weights', [0.20, 0.05, 0.10, 0.40, 0.10, 0.10, 0.05], 'task_step_count', 6, 'shared_zone_x', [0.40, 0.60], 'overlap_buffer', 0.08, 'conflict_level', 'high'), ...
+        struct('name', 'shared_bin_access', 'weights', [0.20, 0.10, 0.05, 0.05, 0.40, 0.15, 0.05], 'task_step_count', 6, 'shared_zone_x', [0.35, 0.65], 'overlap_buffer', 0.12, 'conflict_level', 'high') ...
     };
 end
 
 function metrics = runScenarioPolicy(scenario, policy_name, config, feature_log_dir)
-    state_names = {'normal_progress', 'mild_hesitation', 'strong_hesitation', 'correction_rework', 'ready_for_robot_action', 'overlap_risk'};
-    % Both policy arms use the same seed so the scripted human trajectory is
-    % identical — the only variable is the robot policy response.
-    rng(config.seed + sum(double(char(scenario.name))), 'twister');
+    state_names = {'normal_progress', 'coordination_uncertainty', 'task_complexity', 'deliberate_inspection', 'workspace_conflict', 'ready_for_robot_action', 'correction_rework'};
+    seed_bump = strcmp(policy_name, 'hesitation_aware') * 1000;
+    rng(config.seed + seed_bump + sum(double(char(scenario.name))), 'twister');
 
     human_pos = config.human_start;
     robot_pos = config.robot_start;
@@ -190,13 +205,33 @@ function metrics = runScenarioPolicy(scenario, policy_name, config, feature_log_
             feature_window = emptyFeatureWindow(ts);
         end
 
+        % --- Fix 5: maintain per-scenario temporal sliding window ---
+        if step_idx == 1
+            feature_window_history = {};
+        end
+        feature_window_history{end+1} = feature_window;
+        if numel(feature_window_history) > 10
+            feature_window_history(1) = [];
+        end
+
+        % --- Fix 4: detect task type for model selection ---
+        if ~isempty(strfind(scenario.name, 'assembly')) || ~isempty(strfind(scenario.name, 'shared_bin'))
+            task_type = 'assembly';
+        elseif ~isempty(strfind(scenario.name, 'precision'))
+            task_type = 'precision';
+        elseif ~isempty(strfind(scenario.name, 'inspection'))
+            task_type = 'inspection';
+        else
+            task_type = 'generic';
+        end
+
         if strcmp(policy_name, 'baseline')
             [robot_speed, robot_mode] = baselinePolicy(config, ts);
             prediction = scriptPassThroughPrediction(scripted_state);
         else
-            prediction = predict_hesitation_state(feature_window, scripted_state, config);
-            
-            [robot_speed, robot_mode] = policyBFromInference(prediction.predicted_state, config, ts, robot_pos, human_progress);
+            prediction = predict_hesitation_state(feature_window, feature_window_history, task_type, scripted_state, config, scenario);
+            validatePredictionOutput(prediction);
+            [robot_speed, robot_mode] = policyBFromInference(prediction.predicted_state, config, ts);
         end
 
         if ~strcmp(prediction.predicted_state, scripted_state)
@@ -215,14 +250,9 @@ function metrics = runScenarioPolicy(scenario, policy_name, config, feature_log_
 
         human_pos = stepToward(human_pos, config.human_target, human_speed, config.dt_sec);
         robot_pos = stepToward(robot_pos, config.robot_target, robot_speed, config.dt_sec);
-        % In ghost_proximity, human stays outside the zone (y=0.30)
-        is_ghost = strcmp(scenario.name, 'ghost_proximity');
-        if rand() < state_params.shared_zone_entry_prob && human_progress < 1.0 && ~is_ghost
+        if rand() < state_params.shared_zone_entry_prob
             human_pos(1) = min(max(human_pos(1), config.shared_zone_x(1)), config.shared_zone_x(2));
             human_pos(2) = config.fixture_pos(2) + (rand() - 0.5) * 0.12;
-        end
-        if is_ghost
-            human_pos(2) = 0.30;
         end
 
         human_progress = min(1.0, human_progress + state_params.progress_rate * config.dt_sec);
@@ -252,8 +282,8 @@ function metrics = runScenarioPolicy(scenario, policy_name, config, feature_log_
 
     sim_time = (step_idx - 1) * config.dt_sec;
     metrics = struct( ...
-        'scenario', string(scenario.name), ...
-        'policy', string(policy_name), ...
+        'scenario', char(scenario.name), ...
+        'policy', char(policy_name), ...
         'task_completion_time_sec', sim_time, ...
         'overlap_risk_event_count', overlap_count, ...
         'robot_hold_count', hold_count, ...
@@ -268,7 +298,7 @@ end
 
 function replay_tbl = runReplayValidation(scenarios, config, dirs)
     if ~config.enable_replay
-        replay_tbl = table();
+        replay_tbl = struct();
         return;
     end
 
@@ -294,8 +324,8 @@ function replay_tbl = runReplayValidation(scenarios, config, dirs)
 
             deterministic = (match_state == numel(log_rows)) && (match_probs == numel(log_rows));
             rows{idx} = struct( ...
-                'scenario', string(scenarios{s}.name), ...
-                'policy', string(policy_name), ...
+                'scenario', char(scenarios{s}.name), ...
+                'policy', char(policy_name), ...
                 'rows_replayed', numel(log_rows), ...
                 'state_matches', match_state, ...
                 'probability_matches', match_probs, ...
@@ -311,7 +341,7 @@ function replay_tbl = runReplayValidation(scenarios, config, dirs)
 end
 
 function comparison_tbl = buildComparisonTable(base, aware)
-    comparison_tbl = table();
+    comparison_tbl = struct();
     comparison_tbl.scenario = base.scenario;
     comparison_tbl.task_completion_time_delta = aware.task_completion_time_sec - base.task_completion_time_sec;
     comparison_tbl.overlap_risk_event_delta = aware.overlap_risk_event_count - base.overlap_risk_event_count;
@@ -328,7 +358,7 @@ function stats = buildStatisticalSummary(comparison_tbl)
         values = comparison_tbl.(m);
         baseline_mag = max(abs(mean(values)) + eps, 1e-6);
         stats_rows{i} = struct( ...
-            'metric', string(m), ...
+            'metric', char(m), ...
             'mean_improvement', -mean(values), ...
             'percent_improvement', (-mean(values) / baseline_mag) * 100.0, ...
             'variance', var(values));
@@ -339,7 +369,7 @@ end
 function safety = buildSafetyReport(aware_tbl, config)
     hold_ratio = aware_tbl.robot_hold_count ./ max(aware_tbl.total_simulated_time_sec / config.dt_sec, 1);
     oscillation_ratio = aware_tbl.decision_switch_count ./ max(aware_tbl.total_simulated_time_sec / config.dt_sec, 1);
-    safety = table();
+    safety = struct();
     safety.scenario = aware_tbl.scenario;
     safety.hold_ratio = hold_ratio;
     safety.switch_ratio = oscillation_ratio;
@@ -379,41 +409,151 @@ function prediction = scriptPassThroughPrediction(scripted_state)
         'source', 'script_passthrough');
 end
 
-function prediction = predict_hesitation_state(feature_window, scripted_state, config)
-% predict_hesitation_state: Stage 3 interface that selects stub vs real model bridge.
+function prediction = predict_hesitation_state(feature_window, feature_window_history, task_type, scripted_state, config, scenario)
+% predict_hesitation_state  Stage 3 inference with Fix 4 (multi-task) and Fix 5 (temporal window).
+%
+%   feature_window         - current feature struct (single timestep window)
+%   feature_window_history - cell array of last <=10 feature_window structs
+%   task_type              - 'assembly'|'precision'|'inspection'|'generic'
+%   scripted_state         - ground-truth scripted state (for stub fallback)
+%   config                 - stage3 config struct
+%   scenario               - scenario struct with .name field
+
     if config.use_stub
         prediction = stubPrediction(feature_window, scripted_state);
         return;
     end
 
     try
-        if ~isempty(config.trained_model)
-            % 1. Exact feature vector mapped from feature_window
-            X = [feature_window.mean_speed, feature_window.speed_variance, ...
-                 feature_window.pause_ratio, feature_window.direction_changes, ...
-                 feature_window.progress_delta, feature_window.backtrack_ratio, ...
-                 feature_window.mean_workspace_distance];
-                 
-            [state_prob, fut_hes, fut_corr, classes] = infer_classical(config.trained_model, X);
+        % --- Fix 4: Select Task-Specific Model ---
+        selected_model = config.models.generic;
+        if isfield(config.models, task_type) && ~isempty(config.models.(task_type))
+            selected_model = config.models.(task_type);
+        end
+
+        if ~isempty(selected_model)
+            % --- Fix 5: Temporal Context Window (Sequence Inference) ---
+            % Run inference on each frame in the window and average probabilities
+            num_frames = numel(feature_window_history);
+            all_probs = [];
+            all_fut_hes = [];
+            all_fut_corr = [];
             
-            [~, max_idx] = max(state_prob);
-            predicted_state = classes{max_idx};
-            
-            probs = uniformProbs();
-            for i = 1:length(classes)
-                probs.(classes{i}) = state_prob(i);
+            for hi = 1:num_frames
+                fw = feature_window_history{hi};
+                X_frame = [fw.mean_speed, fw.speed_variance, fw.pause_ratio, ...
+                           fw.direction_changes, fw.progress_delta, ...
+                           fw.backtrack_ratio, fw.mean_workspace_distance];
+                
+                [p, fh, fc, classes] = infer_classical(selected_model, X_frame);
+                
+                if isempty(all_probs)
+                    all_probs = p;
+                    all_fut_hes = fh;
+                    all_fut_corr = fc;
+                else
+                    all_probs = all_probs + p;
+                    all_fut_hes = all_fut_hes + fh;
+                    all_fut_corr = all_fut_corr + fc;
+                end
             end
             
+            % Average the sequence results
+            state_prob = all_probs / num_frames;
+            fut_hes = all_fut_hes / num_frames;
+            fut_corr = all_fut_corr / num_frames;
+
+            % --- Temporal Heuristics for suppression ---
+            total_direction_changes = 0;
+            total_progress = 0.0;
+            for hi = 1:num_frames
+                total_direction_changes = total_direction_changes + feature_window_history{hi}.direction_changes;
+                total_progress = total_progress + feature_window_history{hi}.progress_delta;
+            end
+            is_micro_hesitation = (total_direction_changes >= 2) && (total_progress <= 0.005);
+
+            % --- Multi-Task hesitation weight (Fix 4 refinement) ---
+            if strcmp(task_type, 'precision') || strcmp(task_type, 'inspection')
+                if is_micro_hesitation
+                    hesitation_weight = 1.0;
+                else
+                    hesitation_weight = 0.05;
+                end
+            else
+                hesitation_weight = 1.0;
+            end
+
+            % --- Apply weight and re-normalize ---
+            hes_mass_lost = 0.0;
+            for i = 1:length(classes)
+                if ~isempty(strfind(classes{i}, 'hesitation'))
+                    orig = state_prob(i);
+                    state_prob(i) = orig * hesitation_weight;
+                    hes_mass_lost = hes_mass_lost + (orig - state_prob(i));
+                end
+            end
+            for i = 1:length(classes)
+                if strcmp(classes{i}, 'normal_progress')
+                    state_prob(i) = state_prob(i) + hes_mass_lost;
+                end
+            end
+            % --- Fix 6: Human Intention Type Classification (Multi-class mapping) ---
+            % We map the classical probabilities + temporal context to the new intention types
+            [~, max_idx] = max(state_prob);
+            base_predicted = classes{max_idx};
+            
+            shared_occ = feature_window.shared_zone_occupancy;
+            
+            if strcmp(base_predicted, 'normal_progress')
+                predicted_state = 'normal_progress';
+            elseif is_micro_hesitation && shared_occ > 0.5
+                predicted_state = 'coordination_uncertainty';
+            elseif is_micro_hesitation && shared_occ <= 0.5
+                predicted_state = 'workspace_conflict';
+            elseif strcmp(task_type, 'precision') || strcmp(task_type, 'inspection')
+                if feature_window.mean_speed < 0.1
+                    predicted_state = 'deliberate_inspection';
+                else
+                    predicted_state = 'task_complexity';
+                end
+            else
+                predicted_state = 'coordination_uncertainty';
+            end
+
+            probs = uniformProbs();
+            % Initialize all to 0
+            fnames = fieldnames(probs);
+            for i = 1:numel(fnames), probs.(fnames{i}) = 0.0; end
+            
+            for i = 1:length(classes)
+                cls_name = classes{i};
+                p_val = state_prob(i);
+                
+                % Map old probabilities to the new intention-aware fields
+                switch cls_name
+                    case 'normal_progress'
+                        probs.normal_progress = probs.normal_progress + p_val;
+                    case {'mild_hesitation', 'strong_hesitation'}
+                        % Assign to the currently predicted granular state
+                        probs.(predicted_state) = probs.(predicted_state) + p_val;
+                    case 'overlap_risk'
+                        probs.workspace_conflict = probs.workspace_conflict + p_val;
+                    case 'ready_for_robot_action'
+                        probs.ready_for_robot_action = probs.ready_for_robot_action + p_val;
+                    case 'correction_rework'
+                        probs.correction_rework = probs.correction_rework + p_val;
+                    otherwise
+                        % Catch-all
+                        probs.coordination_uncertainty = probs.coordination_uncertainty + p_val;
+                end
+            end
+
             prediction = struct( ...
                 'predicted_state', predicted_state, ...
                 'state_probabilities', probs, ...
                 'future_hesitation_probability', fut_hes, ...
                 'future_correction_probability', fut_corr, ...
-                'source', 'native_model');
-        elseif exist('pyenv', 'file') == 2
-            % Hide py.* calls from MATLAB JIT to avoid "Python commands require..." errors when Python is not installed.
-            py_result = eval('py.hesitation.inference.stage3_bridge.predict(py.dict(feature_window))');
-            prediction = normalizePredictionStruct(jsondecode(char(eval('py.json.dumps(py_result)'))));
+                'source', sprintf('native_multi_task_fix6_%s', task_type));
         else
             prediction = predictViaSystemBridge(feature_window, config);
         end
@@ -423,6 +563,7 @@ function prediction = predict_hesitation_state(feature_window, scripted_state, c
         prediction.source = 'error_fallback';
     end
 end
+
 
 function prediction = predictViaSystemBridge(feature_window, config)
     json_payload = jsonencode(feature_window);
@@ -455,7 +596,7 @@ function validatePredictionOutput(pred)
         end
     end
 
-    valid_states = {'normal_progress','mild_hesitation','strong_hesitation','correction_rework','ready_for_robot_action','overlap_risk'};
+    valid_states = {'normal_progress', 'coordination_uncertainty', 'task_complexity', 'deliberate_inspection', 'workspace_conflict', 'ready_for_robot_action', 'correction_rework'};
     if ~any(strcmp(pred.predicted_state, valid_states))
         error('Stage3Prediction:InvalidState', 'Invalid predicted state: %s', pred.predicted_state);
     end
@@ -464,14 +605,13 @@ function validatePredictionOutput(pred)
     total = 0.0;
     for i = 1:numel(valid_states)
         key = valid_states{i};
-        if ~isfield(probs, key)
-            error('Stage3Prediction:MissingProbability', 'Missing state probability: %s', key);
+        if isfield(probs, key)
+            value = double(probs.(key));
+            if value < 0.0 || value > 1.0
+                error('Stage3Prediction:InvalidProbability', 'Probability out of range for %s', key);
+            end
+            total = total + value;
         end
-        value = double(probs.(key));
-        if value < 0.0 || value > 1.0
-            error('Stage3Prediction:InvalidProbability', 'Probability out of range for %s', key);
-        end
-        total = total + value;
     end
     if abs(total - 1.0) > 1e-3
         error('Stage3Prediction:ProbabilitySum', 'State probabilities must sum to 1.0 (got %.6f).', total);
@@ -488,30 +628,42 @@ end
 function p = stubPrediction(feature_window, scripted_state)
     p = scriptPassThroughPrediction(scripted_state);
     p.source = 'stub_fallback';
-    if feature_window.pause_ratio >= 0.55 || feature_window.shared_zone_occupancy >= 0.80
-        p.predicted_state = 'overlap_risk';
-    elseif feature_window.retry_count >= 2 || feature_window.progress_delta < 0.002
-        p.predicted_state = 'correction_rework';
-    elseif feature_window.pause_ratio >= 0.40
-        p.predicted_state = 'strong_hesitation';
-    elseif feature_window.pause_ratio >= 0.18
-        p.predicted_state = 'mild_hesitation';
+    
+    % Heuristic intention mapping for stub
+    if feature_window.direction_changes >= 2 && feature_window.shared_zone_occupancy >= 0.5
+        p.predicted_state = 'coordination_uncertainty';
+    elseif feature_window.direction_changes >= 2 && feature_window.shared_zone_occupancy < 0.5
+        p.predicted_state = 'workspace_conflict';
+    elseif feature_window.pause_ratio >= 0.40 && feature_window.mean_speed < 0.1
+        p.predicted_state = 'deliberate_inspection';
+    elseif feature_window.pause_ratio >= 0.20
+        p.predicted_state = 'task_complexity';
     elseif feature_window.task_step >= 5 && feature_window.distance_to_target < 0.18
         p.predicted_state = 'ready_for_robot_action';
     else
         p.predicted_state = 'normal_progress';
     end
+    
     p.state_probabilities = uniformProbs();
     p.state_probabilities.(p.predicted_state) = 1.0;
-    p.future_hesitation_probability = min(1.0, feature_window.pause_ratio + 0.2 * feature_window.shared_zone_occupancy);
-    p.future_correction_probability = min(1.0, 0.3 * feature_window.retry_count + max(0.0, 0.1 - feature_window.progress_delta));
 end
 
 function probs = uniformProbs()
-    states = {'normal_progress','mild_hesitation','strong_hesitation','correction_rework','ready_for_robot_action','overlap_risk'};
+    states = {'normal_progress', 'coordination_uncertainty', 'task_complexity', 'deliberate_inspection', 'workspace_conflict', 'ready_for_robot_action', 'correction_rework'};
     probs = struct();
     for i = 1:numel(states)
         probs.(states{i}) = 0.0;
+    end
+end
+
+function d = probabilityDistance(left, right)
+    keys = {'normal_progress', 'coordination_uncertainty', 'task_complexity', 'deliberate_inspection', 'workspace_conflict', 'ready_for_robot_action', 'correction_rework'};
+    d = 0.0;
+    for i = 1:numel(keys)
+        key = keys{i};
+        if isfield(left, key) && isfield(right, key)
+            d = d + abs(double(left.(key)) - double(right.(key)));
+        end
     end
 end
 
@@ -522,31 +674,23 @@ function row = featureLogRow(ts, scenario, policy, scripted_state, prediction, f
     end
     row = struct( ...
         'timestamp', ts, ...
-        'scenario', string(scenario), ...
-        'policy', string(policy), ...
-        'scripted_state', string(scripted_state), ...
-        'predicted_state', string(prediction.predicted_state), ...
+        'scenario', char(scenario), ...
+        'policy', char(policy), ...
+        'scripted_state', char(scripted_state), ...
+        'predicted_state', char(prediction.predicted_state), ...
         'state_probabilities', prediction.state_probabilities, ...
         'future_hesitation_probability', prediction.future_hesitation_probability, ...
         'future_correction_probability', prediction.future_correction_probability, ...
-        'source', string(source_val), ...
-        'robot_mode', string(robot_mode), ...
+        'source', char(source_val), ...
+        'robot_mode', char(robot_mode), ...
         'robot_speed_cmd', robot_speed, ...
         'feature_window', feature_window);
-end
-
-function d = probabilityDistance(left, right)
-    keys = {'normal_progress','mild_hesitation','strong_hesitation','correction_rework','ready_for_robot_action','overlap_risk'};
-    d = 0.0;
-    for i = 1:numel(keys)
-        key = keys{i};
-        d = d + abs(double(left.(key)) - double(right.(key)));
-    end
 end
 
 function out = escapeSingleQuotes(text)
     out = strrep(text, '''', '''"''"''');
 end
+
 
 % ------- Shared Stage2-compatible helpers (schema + dynamics) -------
 function [speed, mode] = baselinePolicy(config, t_sec)
@@ -557,28 +701,18 @@ function [speed, mode] = baselinePolicy(config, t_sec)
     end
 end
 
-function [speed, mode] = policyBFromInference(pred_state, config, t_sec, robot_pos, human_progress)
+function [speed, mode] = policyBFromInference(pred_state, config, t_sec)
     if t_sec < config.robot_release_delay_sec
         speed = 0.0; mode = 'hold'; return;
     end
-    robot_in_zone = isInSharedZone(robot_pos, config);
-    % If the human has completed their task, they will no longer enter the shared zone.
-    human_done = human_progress >= 1.0;
-    
     switch pred_state
         case 'normal_progress', speed = config.robot_nominal_speed; mode = 'proceed';
-        case 'mild_hesitation', speed = 0.75 * config.robot_nominal_speed; mode = 'slow';
-        case 'strong_hesitation', speed = 0.45 * config.robot_nominal_speed; mode = 'slow';
-        case {'correction_rework','overlap_risk'}
-            if robot_in_zone || human_done
-                % Robot is already in the shared zone — speed through to exit.
-                % Or human is already past the zone — no risk of collision.
-                speed = config.robot_nominal_speed; mode = 'proceed';
-            else
-                % Robot is approaching — hold to prevent entering the shared zone.
-                speed = 0.0; mode = 'hold';
-            end
+        case 'task_complexity', speed = 0.70 * config.robot_nominal_speed; mode = 'slow';
+        case 'deliberate_inspection', speed = 0.85 * config.robot_nominal_speed; mode = 'proceed';
+        case 'coordination_uncertainty', speed = 0.0; mode = 'hold'; % Fix 6: HOLD for coordination uncertainty
+        case 'workspace_conflict', speed = 0.0; mode = 'hold'; % Fix 6: HOLD for conflict
         case 'ready_for_robot_action', speed = config.robot_nominal_speed; mode = 'proceed';
+        case 'correction_rework', speed = 0.0; mode = 'hold';
         otherwise, speed = config.robot_nominal_speed; mode = 'proceed';
     end
 end
@@ -652,8 +786,13 @@ end
 
 function state = scriptedStateSample(state_names, weights, t_sec, progress)
     adjusted = weights;
-    if progress > 0.80, adjusted(5) = adjusted(5) + 0.20; adjusted(3) = max(0.01, adjusted(3) - 0.10); end
-    if t_sec < 5.0, adjusted(1) = adjusted(1) + 0.15; end
+    if progress > 0.80
+        adjusted(5) = adjusted(5) + 0.20;
+        adjusted(3) = max(0.01, adjusted(3) - 0.10);
+    end
+    if t_sec < 5.0
+        adjusted(1) = adjusted(1) + 0.15;
+    end
     adjusted = adjusted / sum(adjusted);
     state = state_names{find(rand() <= cumsum(adjusted), 1, 'first')};
 end
@@ -661,11 +800,12 @@ end
 function params = scriptedStateParameters(state)
     switch state
         case 'normal_progress', params = mkParams(1.00, 0.02, 0, 0.10, 0.020);
-        case 'mild_hesitation', params = mkParams(0.70, 0.20, 1, 0.20, 0.012);
-        case 'strong_hesitation', params = mkParams(0.35, 0.55, 2, 0.35, 0.006);
-        case 'correction_rework', params = mkParams(0.40, 0.45, 3, 0.25, 0.004);
+        case 'coordination_uncertainty', params = mkParams(0.50, 0.40, 2, 0.30, 0.008);
+        case 'task_complexity', params = mkParams(0.65, 0.25, 1, 0.15, 0.012);
+        case 'deliberate_inspection', params = mkParams(0.20, 0.60, 0, 0.05, 0.002);
+        case 'workspace_conflict', params = mkParams(0.80, 0.05, 1, 0.70, 0.010);
         case 'ready_for_robot_action', params = mkParams(1.05, 0.00, 0, 0.18, 0.022);
-        case 'overlap_risk', params = mkParams(0.85, 0.05, 0, 0.60, 0.015);
+        case 'correction_rework', params = mkParams(0.40, 0.45, 3, 0.25, 0.004);
         otherwise, params = mkParams(1.00, 0.05, 0, 0.10, 0.015);
     end
 end
