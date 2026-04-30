@@ -4,9 +4,9 @@
 
 Integrated Human-Robot Collaboration (HRC) datasets with baseline hand-off simulation framework, enabling validation of simulation scenarios against real-world experimental data with ISO/TS 15066 safety compliance checking.
 
-**Status**: ✅ **COMPLETE**  
-**Last Updated**: April 27, 2026  
-**Version**: 2.0 - Enhanced with Dataset Validation
+**Status**: Active Research — A/B benchmark running  
+**Last Updated**: April 30, 2026  
+**Version**: 3.0 — Statistical benchmark + paper draft
 
 ---
 
@@ -30,7 +30,7 @@ IEOM/
 │   └── test_octave_struct.m                  # Octave structure test
 │
 ├── 📂 data/                 # Dataset and reference files
-│   ├── hrc_datasets.csv                     # 14 HRC datasets (100% reachable)
+│   ├── hrc_datasets.csv                     # 9 HRC-relevant datasets (rows 1-9); rows 10-29 are unrelated Zenodo scrapes excluded from analysis
 │   ├── hrc_papers.csv                      # 39 research papers
 │   └── iso_safety_limits.csv                # ISO/TS 15066 safety standards
 │
@@ -118,7 +118,7 @@ python scripts/phase2_cli.py train-classical --input /tmp/ieom_synth.jsonl --out
 ### **What You Get**
 - ✅ **7 visualization figures** including dataset validation analysis
 - ✅ **Comprehensive console output** with safety compliance checking
-- ✅ **ISO/TS 15066 validation** against all 14 datasets
+- ✅ **ISO/TS 15066 scenario motivation** from 9 HRC-relevant datasets
 - ✅ **Performance metrics** and safety distribution analysis
 - ✅ **Restored hesitation package** for Python inference, evaluation, and MATLAB bridge workflows
 
@@ -127,10 +127,10 @@ python scripts/phase2_cli.py train-classical --input /tmp/ieom_synth.jsonl --out
 ## 📊 **Key Features**
 
 ### **Dataset Integration**
-- **14 HRC datasets** (100% reachable)
+- **9 HRC-relevant datasets** used for scenario motivation and ISO parameter grounding
 - **39 research papers** supporting analysis
 - **ISO safety standards** integration
-- **Automatic reachability** checking
+- **Note**: `hrc_datasets.csv` contains additional non-HRC Zenodo records (rows 10–29) from a broad scraper run; these are excluded from all analysis
 
 ### **Simulation Capabilities**
 - **Three speed scenarios**: Slow, Moderate, Aggressive
@@ -150,24 +150,26 @@ python scripts/phase2_cli.py train-classical --input /tmp/ieom_synth.jsonl --out
 
 ### **Dataset Coverage**
 ```
-Total Datasets: 14 (100% reachable)
-├── Static Curated: 9 datasets
-├── Zenodo Discovered: 5 datasets
-└── Validation Tested: All datasets
+HRC-Relevant Datasets: 9
+├── Used for: scenario motivation, ISO parameter grounding
+├── NOT used for: trajectory comparison, empirical validation
+└── Full list: data/hrc_datasets.csv (rows 1–9)
 ```
 
-### **Safety Analysis**
+### **Baseline Safety Analysis (1-D kinematic model, fixed-speed policy)**
 ```
-ISO Compliance: 30% of scenarios
-Safety Distribution: 70% unsafe scenarios identified
-Recommendation: Implement adaptive speed control
+ISO Compliance (fixed-speed baseline): 30% of scenarios
+Unsafe scenarios (fixed-speed baseline): 70%
+This result motivates adaptive speed control — it is NOT a Policy B result.
+See artifacts/paper_results/ for A/B benchmark statistics.
 ```
 
-### **Performance Metrics**
+### **A/B Benchmark (run run_paper_benchmark.m for current numbers)**
 ```
-Speed Range: 0.40 - 1.80 m/s
-Task Time: 9.990 - 12.480 s
-Average Separation: 0.0000 m (collision scenarios)
+Primary metric : overlap_risk_event_count (Policy A vs. Policy B)
+Secondary metric: task_completion_time_sec
+N seeds: 500 | Scenarios: 8 | Statistical test: Wilcoxon signed-rank
+See artifacts/paper_results/tables/main_ab_benchmark_summary.csv
 ```
 
 ---
@@ -324,10 +326,11 @@ Archive: archive/ (historical files and databases)
 
 ## ✅ **Project Status**
 
-**Integration Level**: ✅ **Production Ready**  
-**Validation**: ✅ **Tested and Verified**  
-**Documentation**: ✅ **Complete and Updated**  
-**File Organization**: ✅ **Structured and Optimized**  
+**Simulation Engine**: ✅ Runs cleanly across 500 seeds  
+**A/B Benchmark**: ✅ `run_paper_benchmark.m` produces stable CSV + PNG artifacts  
+**Sensitivity Analysis**: ✅ `run_sensitivity_analysis.m` sweeps 27 parameter combos  
+**Research Paper**: 🔄 Draft in `RESEARCH_PAPER.md`  
+**Scope Caveat**: 2-D kinematic model; hesitation classifier trained on synthetic data only — see paper Limitations section  
 
 ---
 

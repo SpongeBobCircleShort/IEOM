@@ -2,7 +2,7 @@
 
 ## 🎯 **Program Purpose**
 
-This program is a **comprehensive Human-Robot Collaboration (HRC) simulation and validation framework** that integrates real-world experimental datasets with baseline hand-off simulation scenarios. It enables researchers and engineers to validate collaborative robot operations against ISO/TS 15066 safety standards while providing data-driven insights for safe human-robot interactions.
+This program is a **Human-Robot Collaboration (HRC) simulation and experimental benchmarking framework** that compares a fixed-speed baseline policy against a hesitation-state-aware adaptive policy for robot speed control during human-robot handoffs. It supports ISO/TS 15066 safety compliance checking and generates statistical paper-ready results over 500+ Monte Carlo seeds.
 
 ---
 
@@ -15,10 +15,10 @@ This program is a **comprehensive Human-Robot Collaboration (HRC) simulation and
 - **Real-time safety assessment** with configurable thresholds
 
 ### **Data Integration Layer**
-- **14 HRC research datasets** (100% reachable from academic sources)
+- **9 HRC-relevant datasets** used for scenario motivation and ISO parameter grounding
 - **ISO/TS 15066 safety standards** integration for 15 body regions
-- **39 research papers** supporting validation and methodology
-- **Automatic dataset validation** against simulation parameters
+- **39 research papers** supporting related-work section
+- **Note**: `hrc_datasets.csv` rows 10–29 are unrelated Zenodo scrapes and are excluded from all analysis
 
 ### **Visualization & Analysis**
 - **7 comprehensive figures** with multi-faceted analysis
@@ -93,17 +93,21 @@ The program integrates **international safety standards** for collaborative robo
 
 ### **Primary Datasets**
 
-#### **HRC Datasets (14 total)**
-1. **TU Munich Handover Dataset** - KUKA LBR iiwa, 20 subjects
-2. **Speed Separation Monitoring** - Universal Robots UR10e, ISO validation
-3. **CHSF Safety Features** - Universal Robots UR5, collaborative assembly
-4. **ProxEMG Dataset** - Franka Emika Panda, EMG + proximity
-5. **MIT HRC Assembly** - ABB YuMi, 30 subjects
-6. **HAGs Glovebox Assembly** - Industrial arm, hazardous environments
-7. **ROSchain FANUC Logs** - FANUC CR-35iA, heavy payload
-8. **ICRA 2024 Handoff** - Franka Panda, visual tracking
-9. **Rethink Baxter** - Dual-arm collaborative benchmark
-10. **Additional datasets** covering various robot platforms and tasks
+#### **HRC Datasets (9 HRC-relevant, rows 1–9 of hrc_datasets.csv)**
+1. **TU Munich Handover Dataset** — KUKA LBR iiwa, 20 subjects
+2. **Speed Separation Monitoring** — Universal Robots UR10e, ISO validation
+3. **CHSF Safety Features** — Universal Robots UR5, collaborative assembly
+4. **ProxEMG Dataset** — Franka Emika Panda, EMG + proximity
+5. **MIT HRC Assembly** — ABB YuMi, 30 subjects
+6. **HAGs Glovebox Assembly** — Industrial arm, hazardous environments
+7. **ROSchain FANUC Logs** — FANUC CR-35iA, heavy payload
+8. **ICRA 2024 Handoff** — Franka Panda, visual tracking
+9. **Rethink Baxter** — Dual-arm collaborative benchmark
+
+> **Usage**: These datasets motivate the 8 factory-floor scenario designs and
+> ground the ISO/TS 15066 speed-limit parameters. They are **not** used for
+> trajectory comparison or empirical training data — all hesitation-model
+> training data is synthetically generated (see `scripts/generate_synthetic_dataset.py`).
 
 #### **Research Papers (39 total)**
 - **Academic sources**: arXiv, IEEE, Springer, ACM
@@ -167,19 +171,16 @@ for each reachable dataset:
 - **Safety status histogram** (Safe/Marginal/Unsafe)
 - **Performance summary metrics** dashboard
 
-### **Quantitative Results**
+### **Quantitative Results (1-D Baseline Simulation — Fixed-Speed Policy Only)**
 ```
-Validation Summary:
-├── Datasets Validated: 14 (100% of reachable datasets)
-├── Safety Distribution:
-│   ├── Safe: 30% of scenarios
-│   ├── Marginal: 25% of scenarios  
-│   └── Unsafe: 45% of scenarios
-├── ISO Compliance: 30% of datasets
-└── Performance Range:
-    ├── Speed: 0.40 - 1.80 m/s
-    ├── Task Time: 9.99 - 12.48 s
-    └── Separation: 0.000 - 0.500 m
+Baseline Compliance Summary:
+├── Scenarios Tested: 3 speed profiles (Slow 0.4 m/s, Moderate 0.9 m/s, Aggressive 1.8 m/s)
+├── ISO-Safe: 30% of scenarios (motivates adaptive control research)
+└── Unsafe:  70% of scenarios
+
+Note: These numbers are from the 1-D baseline sim, NOT from the A/B benchmark.
+For current A/B comparison results, run run_paper_benchmark.m and see:
+  artifacts/paper_results/tables/main_ab_benchmark_summary.csv
 ```
 
 ---
@@ -281,16 +282,19 @@ matlab -batch "baseline_handoff_simulation"
 
 ## 🔬 **Validation Methodology**
 
-### **Dataset Matching Algorithm**
+### **Dataset Matching — Scenario Motivation Only**
 ```matlab
-% Task-based scenario matching
+% Task keyword → scenario label mapping (heuristic, for scenario design motivation)
+% This is NOT empirical validation; it maps dataset descriptions to speed regimes
+% to justify our scenario parameter choices.
 if contains(task, 'careful') || contains(task, 'safety')
-    scenario = 'Slow';
-elseif contains(task, 'efficient') || contains(task, 'fast')  
-    scenario = 'Aggressive';
+    scenario = 'Slow';       % conservative ISO regime
+elseif contains(task, 'efficient') || contains(task, 'fast')
+    scenario = 'Aggressive'; % productivity-focused regime
 else
-    scenario = 'Moderate';
+    scenario = 'Moderate';   % nominal collaborative assembly
 end
+% NOTE: No trajectory comparison is performed against real dataset timeseries.
 ```
 
 ### **Safety Assessment Framework**
@@ -368,10 +372,11 @@ The IEOM program represents a **comprehensive, scientifically-grounded approach*
 - **Optimizing performance** while maintaining safety margins
 - **Advancing HRC research** through reproducible methodology
 
-**Current Status**: ✅ **Production Ready**  
-**Validation Level**: ✅ **Comprehensively Tested**  
-**Documentation**: ✅ **Complete and Updated**  
-**Dataset Coverage**: ✅ **100% Reachable (14/14 datasets)**
+**Current Status**: Active Research—A/B benchmark running  
+**Simulation Scope**: 2-D planar kinematic model (explicitly bounded)  
+**Training Data**: Synthetic only (see `scripts/generate_synthetic_dataset.py`)  
+**Statistical Rigor**: 500-seed Monte Carlo, 95% CIs, Wilcoxon signed-rank  
+**Research Paper**: Draft in progress (`RESEARCH_PAPER.md`)
 
 This framework enables the next generation of safe, efficient, and validated human-robot collaboration systems for industrial and research applications.
 
