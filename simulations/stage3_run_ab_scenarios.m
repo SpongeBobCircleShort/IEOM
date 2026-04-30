@@ -1,6 +1,11 @@
 function summary = stage3_run_ab_scenarios(varargin)
 % stage3_run_ab_scenarios: Stage 3 A/B evaluation with real model bridge + replay validation.
 
+    if nargin == 3 && ischar(varargin{1}) && ischar(varargin{2}) && isnumeric(varargin{3})
+        summary = runSinglePolicyDiagnostic(varargin{1}, varargin{2}, varargin{3});
+        return;
+    end
+
     opts = parseStage3Options(varargin{:});
     root_dir = fileparts(fileparts(mfilename('fullpath')));
     output_root = fullfile(root_dir, 'artifacts', 'simulink_stage3');
@@ -43,10 +48,12 @@ function summary = stage3_run_ab_scenarios(varargin)
     replay_tbl = runReplayValidation(envs, config, dirs);
     writetable(replay_tbl, fullfile(dirs.reports, 'replay_validation.csv'));
 
-    try
-        renderStage3Figures(dirs.figures, comparison_tbl, aware_tbl);
-    catch fig_err
-        fprintf('[INFO] Skipping stage3 figures (headless): %s\n', fig_err.message);
+    if ~opts.no_figures
+        try
+            renderStage3Figures(dirs.figures, comparison_tbl, aware_tbl);
+        catch fig_err
+            fprintf('[INFO] Skipping stage3 figures (headless): %s\n', fig_err.message);
+        end
     end
 
     summary = struct( ...
@@ -138,6 +145,13 @@ function config = buildStage3Config(opts, root_dir)
     
     % Legacy support
     config.trained_model = config.models.generic;
+
+    fprintf('=== MODEL LOADING CHECK ===\n');
+    fprintf('Generic model loaded: %d features\n', modelFeatureCount(config.models.generic));
+    fprintf('Assembly model loaded: %d features\n', modelFeatureCount(config.models.assembly));
+    fprintf('Precision model loaded: %d features\n', modelFeatureCount(config.models.precision));
+    fprintf('Inspection model loaded: %d features\n', modelFeatureCount(config.models.inspection));
+    fprintf('===========================\n\n');
 end
 
 function envs = buildStage3Environments()
@@ -151,9 +165,39 @@ function envs = buildStage3Environments()
     };
 end
 
+function result = runSinglePolicyDiagnostic(scenario_name, policy_name, deterministic_seed)
+    root_dir = fileparts(fileparts(mfilename('fullpath')));
+    output_root = fullfile(root_dir, 'artifacts', 'simulink_stage3');
+    dirs = ensureStage3Dirs(output_root);
+    opts = parseStage3Options('deterministic_seed', deterministic_seed, 'enable_replay', false, 'no_figures', true);
+    config = buildStage3Config(opts, root_dir);
+    envs = buildStage3Environments();
+
+    scenario = [];
+    for i = 1:numel(envs)
+        if strcmp(char(envs{i}.name), scenario_name)
+            scenario = envs{i};
+            break;
+        end
+    end
+    if isempty(scenario)
+        error('Stage3Diagnostic:UnknownScenario', 'Unknown scenario: %s', scenario_name);
+    end
+    if ~(strcmp(policy_name, 'baseline') || strcmp(policy_name, 'hesitation_aware'))
+        error('Stage3Diagnostic:UnknownPolicy', 'Unknown policy: %s', policy_name);
+    end
+    if isfield(scenario, 'shared_zone_x'), config.shared_zone_x = scenario.shared_zone_x; end
+    if isfield(scenario, 'overlap_buffer'), config.overlap_buffer = scenario.overlap_buffer; end
+
+    metrics = runScenarioPolicy(scenario, policy_name, config, dirs.feature_logs);
+    result = metrics;
+    result.overlap_count = metrics.overlap_risk_event_count;
+    result.hold_count = metrics.robot_hold_count;
+end
+
 function metrics = runScenarioPolicy(scenario, policy_name, config, feature_log_dir)
     state_names = {'normal_progress', 'coordination_uncertainty', 'task_complexity', 'deliberate_inspection', 'workspace_conflict', 'ready_for_robot_action', 'correction_rework'};
-    seed_bump = strcmp(policy_name, 'hesitation_aware') * 1000;
+    seed_bump = 0;
     rng(config.seed + seed_bump + sum(double(char(scenario.name))), 'twister');
 
     human_pos = config.human_start;
@@ -172,6 +216,9 @@ function metrics = runScenarioPolicy(scenario, policy_name, config, feature_log_
     correction_count = 0;
     mismatch_count = 0;
     mode_switches = 0;
+    baseline_decisions = 0;
+    hesitation_aware_decisions = 0;
+    different_decisions = 0;
 
     prev_overlap = false;
     prev_scripted = 'normal_progress';
@@ -214,15 +261,9 @@ function metrics = runScenarioPolicy(scenario, policy_name, config, feature_log_
             feature_window_history(1) = [];
         end
 
-        % --- Fix 4: detect task type for model selection ---
-        if ~isempty(strfind(scenario.name, 'assembly')) || ~isempty(strfind(scenario.name, 'shared_bin'))
-            task_type = 'assembly';
-        elseif ~isempty(strfind(scenario.name, 'precision'))
-            task_type = 'precision';
-        elseif ~isempty(strfind(scenario.name, 'inspection'))
-            task_type = 'inspection';
-        else
-            task_type = 'generic';
+        task_type = scenarioTaskType(scenario);
+        if step_idx == 1
+            fprintf('[%s] Task type: %s\n', scenario.name, task_type);
         end
 
         if strcmp(policy_name, 'baseline')
@@ -230,8 +271,34 @@ function metrics = runScenarioPolicy(scenario, policy_name, config, feature_log_
             prediction = scriptPassThroughPrediction(scripted_state);
         else
             prediction = predict_hesitation_state(feature_window, feature_window_history, task_type, scripted_state, config, scenario);
+            if step_idx == 1 || mod(step_idx, 100) == 0
+                fprintf('Prediction structure fields:\n');
+                disp(fieldnames(prediction));
+                if isfield(prediction, 'state_probabilities')
+                    fprintf('State probabilities:\n');
+                    disp(prediction.state_probabilities);
+                else
+                    fprintf('NO state_probabilities field!\n');
+                end
+            end
+            trackPredictedState(prediction.predicted_state);
             validatePredictionOutput(prediction);
-            [robot_speed, robot_mode] = policyBFromInference(prediction.predicted_state, config, ts);
+            [robot_speed, robot_mode] = policyBFromInference(prediction, config, ts);
+        end
+
+        if strcmp(policy_name, 'baseline')
+            baseline_decisions = baseline_decisions + 1;
+        else
+            hesitation_aware_decisions = hesitation_aware_decisions + 1;
+            [baseline_speed, baseline_mode] = baselinePolicy(config, ts); %#ok<ASGLU>
+            if ~strcmp(robot_mode, baseline_mode)
+                different_decisions = different_decisions + 1;
+            end
+            if step_idx == 1 || mod(step_idx, 100) == 0
+                fprintf('t=%.1f | Model: %s | Pred: %s (prob=%.3f) | True: %s | Robot: %s\n', ...
+                    ts, task_type, prediction.predicted_state, ...
+                    maxStateProbability(prediction.state_probabilities), scripted_state, robot_mode);
+            end
         end
 
         if ~strcmp(prediction.predicted_state, scripted_state)
@@ -280,6 +347,14 @@ function metrics = runScenarioPolicy(scenario, policy_name, config, feature_log_
     log_rows = log_rows(1:row_idx-1);
     writeJsonl(fullfile(feature_log_dir, sprintf('%s_%s.jsonl', scenario.name, policy_name)), log_rows);
 
+    if strcmp(policy_name, 'hesitation_aware')
+        fprintf('\n=== POLICY COMPARISON ===\n');
+        fprintf('Total decisions: %d\n', hesitation_aware_decisions);
+        fprintf('Different from baseline: %d (%.1f%%)\n', ...
+            different_decisions, 100*different_decisions/max(hesitation_aware_decisions, 1));
+        fprintf('========================\n\n');
+    end
+
     sim_time = (step_idx - 1) * config.dt_sec;
     metrics = struct( ...
         'scenario', char(scenario.name), ...
@@ -313,7 +388,8 @@ function replay_tbl = runReplayValidation(scenarios, config, dirs)
             match_probs = 0;
             for j = 1:numel(log_rows)
                 entry = log_rows(j);
-                pred = predict_hesitation_state(entry.feature_window, char(entry.scripted_state), config);
+                task_type = scenarioTaskType(scenarios{s});
+                pred = predict_hesitation_state(entry.feature_window, {entry.feature_window}, task_type, char(entry.scripted_state), config, scenarios{s});
                 if strcmp(pred.predicted_state, char(entry.predicted_state))
                     match_state = match_state + 1;
                 end
@@ -477,11 +553,12 @@ function prediction = predict_hesitation_state(feature_window, feature_window_hi
                 if is_micro_hesitation
                     hesitation_weight = 1.0;
                 else
-                    hesitation_weight = 0.05;
+                    hesitation_weight = 0.35;
                 end
             else
                 hesitation_weight = 1.0;
             end
+            fprintf('  [Weight] Task=%s, Weight=%.3f\n', task_type, hesitation_weight);
 
             % --- Apply weight and re-normalize ---
             hes_mass_lost = 0.0;
@@ -547,6 +624,7 @@ function prediction = predict_hesitation_state(feature_window, feature_window_hi
                         probs.coordination_uncertainty = probs.coordination_uncertainty + p_val;
                 end
             end
+            probs = normalizeStage3Probabilities(probs);
 
             prediction = struct( ...
                 'predicted_state', predicted_state, ...
@@ -656,6 +734,27 @@ function probs = uniformProbs()
     end
 end
 
+function probs = normalizeStage3Probabilities(probs)
+    states = {'normal_progress', 'coordination_uncertainty', 'task_complexity', 'deliberate_inspection', 'workspace_conflict', 'ready_for_robot_action', 'correction_rework'};
+    total = 0.0;
+    for i = 1:numel(states)
+        key = states{i};
+        value = double(probs.(key));
+        value = min(max(value, 0.0), 1.0);
+        probs.(key) = value;
+        total = total + value;
+    end
+    if total <= 0.0
+        probs = uniformProbs();
+        probs.normal_progress = 1.0;
+        return;
+    end
+    for i = 1:numel(states)
+        key = states{i};
+        probs.(key) = probs.(key) / total;
+    end
+end
+
 function d = probabilityDistance(left, right)
     keys = {'normal_progress', 'coordination_uncertainty', 'task_complexity', 'deliberate_inspection', 'workspace_conflict', 'ready_for_robot_action', 'correction_rework'};
     d = 0.0;
@@ -701,19 +800,83 @@ function [speed, mode] = baselinePolicy(config, t_sec)
     end
 end
 
-function [speed, mode] = policyBFromInference(pred_state, config, t_sec)
-    if t_sec < config.robot_release_delay_sec
-        speed = 0.0; mode = 'hold'; return;
+function [speed, mode] = policyBFromInference(prediction, config, t_sec)
+    % Policy B: use prediction probabilities to modify robot behavior.
+    predicted_state = char(prediction.predicted_state);
+    probs = prediction.state_probabilities;
+    coordination_prob = probField(probs, 'coordination_uncertainty');
+    high_risk_prob = probField(probs, 'workspace_conflict') + ...
+        probField(probs, 'correction_rework') + ...
+        probField(probs, 'overlap_risk') + ...
+        probField(probs, 'strong_hesitation');
+    slowdown_prob = probField(probs, 'task_complexity') + ...
+        probField(probs, 'deliberate_inspection') + ...
+        probField(probs, 'mild_hesitation');
+
+    if high_risk_prob >= 0.25 || coordination_prob >= 0.80
+        mode = 'hold';
+        speed = 0.0;
+    elseif coordination_prob >= 0.35 || slowdown_prob >= 0.35 || ...
+            any(strcmp(predicted_state, {'mild_hesitation', 'task_complexity', 'deliberate_inspection'}))
+        mode = 'slow';
+        speed = config.robot_nominal_speed * 0.3;
+    elseif any(strcmp(predicted_state, {'normal_progress', 'ready_for_robot_action'}))
+        if t_sec < config.robot_release_delay_sec
+            mode = 'hold';
+            speed = 0.0;
+        else
+            mode = 'proceed';
+            speed = config.robot_nominal_speed;
+        end
+    else
+        mode = 'slow';
+        speed = config.robot_nominal_speed * 0.5;
     end
-    switch pred_state
-        case 'normal_progress', speed = config.robot_nominal_speed; mode = 'proceed';
-        case 'task_complexity', speed = 0.70 * config.robot_nominal_speed; mode = 'slow';
-        case 'deliberate_inspection', speed = 0.85 * config.robot_nominal_speed; mode = 'proceed';
-        case 'coordination_uncertainty', speed = 0.0; mode = 'hold'; % Fix 6: HOLD for coordination uncertainty
-        case 'workspace_conflict', speed = 0.0; mode = 'hold'; % Fix 6: HOLD for conflict
-        case 'ready_for_robot_action', speed = config.robot_nominal_speed; mode = 'proceed';
-        case 'correction_rework', speed = 0.0; mode = 'hold';
-        otherwise, speed = config.robot_nominal_speed; mode = 'proceed';
+end
+
+function value = probField(probs, key)
+    value = 0.0;
+    if isfield(probs, key)
+        value = double(probs.(key));
+    end
+end
+
+function value = maxStateProbability(probs)
+    fields = fieldnames(probs);
+    value = 0.0;
+    for i = 1:numel(fields)
+        value = max(value, double(probs.(fields{i})));
+    end
+end
+
+function trackPredictedState(predicted_state)
+    global STATE_COUNTS;
+    if isempty(STATE_COUNTS) || ~isstruct(STATE_COUNTS)
+        STATE_COUNTS = struct();
+    end
+    key = matlab.lang.makeValidName(char(predicted_state));
+    if ~isfield(STATE_COUNTS, key)
+        STATE_COUNTS.(key) = 0;
+    end
+    STATE_COUNTS.(key) = STATE_COUNTS.(key) + 1;
+end
+
+function count = modelFeatureCount(model)
+    count = 0;
+    if isstruct(model) && isfield(model, 'feature_order')
+        count = numel(model.feature_order);
+    end
+end
+
+function task_type = scenarioTaskType(scenario)
+    if ~isempty(strfind(scenario.name, 'assembly')) || ~isempty(strfind(scenario.name, 'shared_bin'))
+        task_type = 'assembly';
+    elseif ~isempty(strfind(scenario.name, 'precision'))
+        task_type = 'precision';
+    elseif ~isempty(strfind(scenario.name, 'inspection'))
+        task_type = 'inspection';
+    else
+        task_type = 'generic';
     end
 end
 
