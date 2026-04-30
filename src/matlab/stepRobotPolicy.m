@@ -58,6 +58,21 @@ function robot = stepRobotPolicy(robot, human, interaction, prediction, policy_n
 end
 
 function robot = applyPolicyB(robot, interaction, prediction, config)
+    [env_hold_threshold, env_slow_threshold, env_release_threshold] = environmentThresholds(config);
+    adaptation = adaptiveInterventionAdjustment(config, robot);
+    hold_threshold = min(0.95, max(0.20, env_hold_threshold + adaptation));
+    slow_threshold = min(0.90, max(0.15, env_slow_threshold + 0.5 * adaptation));
+    release_threshold = min(0.60, max(0.05, env_release_threshold + 0.5 * adaptation));
+
+    ambiguity_level = 0.0;
+    if isfield(prediction, 'ambiguity_level')
+        ambiguity_level = prediction.ambiguity_level;
+    end
+    if ambiguity_level >= 0.70
+        hold_threshold = min(0.96, hold_threshold + 0.08);
+        slow_threshold = min(0.92, slow_threshold + 0.05);
+    end
+
     if interaction.robot_in_shared_zone
         robot.release_stable_frames = 0;
         robot = setRobotMode(robot, 'proceed');
@@ -70,14 +85,14 @@ function robot = applyPolicyB(robot, interaction, prediction, config)
 
     hold_condition = (high_confidence_state && (strcmp(prediction.state, 'strong_hesitation') || ...
         strcmp(prediction.state, 'correction_rework'))) || ...
-        (high_confidence_risk && (prediction.future_hesitation_prob >= config.policy_b.hold_future_hesitation_threshold || ...
+        (high_confidence_risk && (prediction.future_hesitation_prob >= hold_threshold || ...
         prediction.future_correction_prob >= config.policy_b.hold_future_correction_threshold));
 
     slow_condition = (actionable_slow_state && strcmp(prediction.state, 'mild_hesitation')) || ...
-        prediction.future_hesitation_prob >= config.policy_b.slow_future_hesitation_threshold || ...
+        prediction.future_hesitation_prob >= slow_threshold || ...
         interaction.separation_m < config.policy_b.slow_separation_threshold_m;
 
-    low_risk_release = prediction.future_hesitation_prob < config.policy_b.low_risk_future_hesitation_threshold && ...
+    low_risk_release = prediction.future_hesitation_prob < release_threshold && ...
         prediction.future_correction_prob < config.policy_b.low_risk_future_correction_threshold && ...
         ~strcmp(prediction.state, 'strong_hesitation') && ...
         ~strcmp(prediction.state, 'correction_rework');
@@ -110,6 +125,47 @@ function robot = applyPolicyB(robot, interaction, prediction, config)
     end
 
     robot = setRobotMode(robot, 'proceed');
+end
+
+function [hold_value, slow_value, release_value] = environmentThresholds(config)
+    hold_value = config.policy_b.hold_future_hesitation_threshold;
+    slow_value = config.policy_b.slow_future_hesitation_threshold;
+    release_value = config.policy_b.low_risk_future_hesitation_threshold;
+    if ~isfield(config, 'env_context') || ~isfield(config, 'environment_thresholds')
+        return;
+    end
+    env_name = config.env_context.environment_name;
+    if isfield(config.environment_thresholds, env_name)
+        env_cfg = config.environment_thresholds.(env_name);
+        if isfield(env_cfg, 'hold_hesitation')
+            hold_value = env_cfg.hold_hesitation;
+        end
+        if isfield(env_cfg, 'slow_hesitation')
+            slow_value = env_cfg.slow_hesitation;
+        end
+        if isfield(env_cfg, 'release_hesitation')
+            release_value = env_cfg.release_hesitation;
+        end
+    end
+end
+
+function adjustment = adaptiveInterventionAdjustment(config, robot)
+    % Positive adjustment raises thresholds (fewer holds), negative lowers thresholds (more holds).
+    adjustment = 0.0;
+    if ~isfield(config, 'env_context')
+        return;
+    end
+    conflict_level = max(config.env_context.workspace_constraint_level, config.env_context.task_precision_required);
+    hold_rate = robot.hold_count / max(1, robot.wait_frames + robot.hold_count);
+    if conflict_level < 0.30
+        if hold_rate > 0.18
+            adjustment = 0.12;
+        else
+            adjustment = 0.08;
+        end
+    elseif conflict_level > 0.70
+        adjustment = -0.05;
+    end
 end
 
 function robot = setRobotMode(robot, new_mode)
