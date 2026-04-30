@@ -24,15 +24,15 @@ function run_paper_benchmark()
     fprintf('=== IEOM Paper Benchmark Runner ===\n');
     fprintf('Running %d seeds across all scenarios...\n\n', num_seeds);
 
-    all_baseline_rows    = struct([]);
-    all_aware_rows       = struct([]);
-    all_comparison_rows  = struct([]);
+    all_baseline_rows   = struct([]);
+    all_aware_rows      = struct([]);
+    all_comparison_rows = struct([]);
 
     % Source-usage tracking (how often each inference path fires)
     source_counts = struct( ...
-        'native_model',      0, ...
-        'error_fallback',    0, ...
-        'stub_fallback',     0, ...
+        'native_model',       0, ...
+        'error_fallback',     0, ...
+        'stub_fallback',      0, ...
         'script_passthrough', 0);
 
     %% Main loop
@@ -81,7 +81,7 @@ function run_paper_benchmark()
         % --- Scan JSONL logs to tally inference source usage ---
         scenarios = summary.scenario_names;
         if ischar(scenarios)
-            scenarios = {scenarios};   % scalar safety
+            scenarios = {scenarios};  % scalar safety
         end
         for s = 1:length(scenarios)
             log_path = fullfile(summary.feature_log_dir, ...
@@ -103,9 +103,9 @@ function run_paper_benchmark()
     fprintf('\nSimulation runs complete. Generating aggregate artifacts...\n');
 
     %% 1. Build aggregate tables
-    baseline_tbl    = struct2table(all_baseline_rows);
-    aware_tbl       = struct2table(all_aware_rows);
-    comparison_tbl  = struct2table(all_comparison_rows);
+    baseline_tbl   = struct2table(all_baseline_rows);
+    aware_tbl      = struct2table(all_aware_rows);
+    comparison_tbl = struct2table(all_comparison_rows);
 
     % Main A/B summary (mean, std, CI, Cohen's d, Wilcoxon p)
     main_summary = createMainSummary(baseline_tbl, aware_tbl);
