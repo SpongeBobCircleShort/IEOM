@@ -1,8 +1,13 @@
 function writetable(t, path, varargin)
-% writetable  Octave-compatible shim. Writes a struct-of-columns to CSV.
+% writetable  Dual-environment shim. Writes a table/struct-of-columns to CSV.
+%   - MATLAB  : delegates transparently to the built-in via builtin().
+%   - Octave  : provides a hand-written CSV writer (Octave lacks writetable).
   if ~exist('OCTAVE_VERSION', 'builtin')
-    error('writetable shim called in MATLAB — check your path order.');
+    % MATLAB path: hand off to the real built-in unconditionally.
+    builtin('writetable', t, path, varargin{:});
+    return;
   end
+  % Octave path: hand-written struct-of-columns -> CSV writer.
   fn = fieldnames(t);
   if isempty(fn)
     fid = fopen(path, 'w'); if fid >= 0, fclose(fid); end
