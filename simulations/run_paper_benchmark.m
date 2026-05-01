@@ -12,7 +12,7 @@ function run_paper_benchmark()
         addpath(fullfile(fileparts(mfilename('fullpath')), 'octave_shims'));
     end
     rng(42, 'twister');                          % reproducible seed list
-    NUM_SEEDS   = 500;
+    NUM_SEEDS   = 50;
     seeds       = randi([1, 100000], 1, NUM_SEEDS);
     num_seeds   = length(seeds);
 
@@ -282,7 +282,8 @@ function generateFigures(base, aware, out_dir)
     
     bar([base_overlap', aware_overlap']);
     title('Safety Comparison: Total Overlap Events');
-    xticklabels(strrep(cellstr(scenarios), '_', '\_'));
+    set(gca, 'TickLabelInterpreter', 'none');
+    xticklabels(cellstr(scenarios));
     xtickangle(25);
     ylabel('Event Count');
     legend('Policy A (Baseline)', 'Policy B (Model-Aware)', 'Location', 'northwest');
@@ -300,7 +301,8 @@ function generateFigures(base, aware, out_dir)
     
     bar([base_time', aware_time']);
     title('Efficiency Comparison: Mean Task Completion Time');
-    xticklabels(strrep(cellstr(scenarios), '_', '\_'));
+    set(gca, 'TickLabelInterpreter', 'none');
+    xticklabels(cellstr(scenarios));
     xtickangle(25);
     ylabel('Time (s)');
     legend('Policy A (Baseline)', 'Policy B (Model-Aware)', 'Location', 'northwest');
@@ -345,7 +347,8 @@ function generateFigures(base, aware, out_dir)
     
     bar([base_holds', aware_holds']);
     title('Intervention Comparison: Mean Robot Hold Count');
-    xticklabels(strrep(cellstr(scenarios), '_', '\_'));
+    set(gca, 'TickLabelInterpreter', 'none');
+    xticklabels(cellstr(scenarios));
     xtickangle(25);
     ylabel('Mean Holds per Run');
     legend('Policy A (Baseline)', 'Policy B (Model-Aware)', 'Location', 'northwest');
@@ -363,7 +366,8 @@ function generateFigures(base, aware, out_dir)
     
     bar([base_wait', aware_wait']);
     title('Efficiency Comparison: Mean Human Wait Time');
-    xticklabels(strrep(cellstr(scenarios), '_', '\_'));
+    set(gca, 'TickLabelInterpreter', 'none');
+    xticklabels(cellstr(scenarios));
     xtickangle(25);
     ylabel('Wait Time (s)');
     legend('Policy A (Baseline)', 'Policy B (Model-Aware)', 'Location', 'northwest');
