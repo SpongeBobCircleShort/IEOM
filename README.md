@@ -1,12 +1,15 @@
-# IEOM - Human-Robot Collaboration Dataset Integration & Simulation
+# Hesitation-aware robot handoff
 
-## 🎯 **Project Overview**
+Code and data behind **"A Simulation Study of Hesitation-Aware Robotic Handoff: Safety-Efficiency Tradeoffs Across Collaborative Environment Classes"**, accepted for oral presentation at the 16th IEOM International Conference on Industrial Engineering and Operations Management, Ankara, June 2026 (Paper ID 222).
 
-Integrated Human-Robot Collaboration (HRC) datasets with baseline hand-off simulation framework, enabling validation of simulation scenarios against real-world experimental data with ISO/TS 15066 safety compliance checking.
+When a robot hands a part to a person, the person sometimes pauses, reaches back or retries. This project asks whether a robot that recognises that hesitation and slows down gets fewer near-collisions than one moving at a fixed speed, and what that costs in task time.
 
-**Status**: Active Research — A/B benchmark running  
-**Last Updated**: April 30, 2026  
-**Version**: 3.0 — Statistical benchmark + paper draft
+- **Simulation:** a 2-D handoff model in MATLAB/Octave, run as 4,000 paired Monte Carlo episodes (500 seeds across 8 factory-floor environments, from open cells to precision insertion), with both policies seeing the identical human trajectory per seed.
+- **Policy:** a hesitation-state classifier (Python package in `src/hesitation/`) drives an adaptive speed policy, compared with a fixed-speed baseline.
+- **Evaluation:** ISO/TS 15066 safety limits, Cohen's d and Wilcoxon signed-rank tests, and a 27-combination sensitivity sweep.
+- **Data:** 9 curated human-robot collaboration datasets and 39 papers (`data/`).
+
+**Status:** research code as of April 2026. `RESEARCH_PAPER.md` is an early working draft; the published paper is the reference.
 
 ---
 
