@@ -1,12 +1,15 @@
-# IEOM - Human-Robot Collaboration Dataset Integration & Simulation
+# Hesitation-aware robot handoff
 
-## 🎯 **Project Overview**
+Code and data behind **"A Simulation Study of Hesitation-Aware Robotic Handoff: Safety-Efficiency Tradeoffs Across Collaborative Environment Classes"**, accepted for oral presentation at the 16th IEOM International Conference on Industrial Engineering and Operations Management, Ankara, June 2026 (Paper ID 222).
 
-Integrated Human-Robot Collaboration (HRC) datasets with baseline hand-off simulation framework, enabling validation of simulation scenarios against real-world experimental data with ISO/TS 15066 safety compliance checking.
+When a robot hands a part to a person, the person sometimes pauses, reaches back or retries. This project asks whether a robot that recognises that hesitation and slows down gets fewer near-collisions than one moving at a fixed speed, and what that costs in task time.
 
-**Status**: Active Research — A/B benchmark running  
-**Last Updated**: April 30, 2026  
-**Version**: 3.0 — Statistical benchmark + paper draft
+- **Simulation:** a 2-D handoff model in MATLAB/Octave. `simulations/run_paper_benchmark.m` runs paired Monte Carlo episodes across 5 factory-floor environments, from a low-conflict open cell to precision insertion, with 50 seeds by default (`NUM_SEEDS`). For each seed and environment, both policies start from the same random seed.
+- **Policy:** a hesitation-state classifier (Python package in `src/hesitation/`) drives an adaptive speed policy, compared with a fixed-speed baseline.
+- **Evaluation:** ISO/TS 15066 safety limits, Cohen's d and Wilcoxon signed-rank tests, and a 27-combination sensitivity sweep.
+- **Data (`data/`):** ISO/TS 15066 limits, 9 reference HRC dataset entries used for scenario motivation (not for validation), and 38 paper records from arXiv keyword queries, some of them off-topic.
+
+**Status:** research code as of April 2026. `RESEARCH_PAPER.md` is an early working draft: it describes a 500-seed, 8-environment setup that the current code does not use, and its results tables are unfilled. The accepted paper above is the reference.
 
 ---
 
@@ -30,8 +33,8 @@ IEOM/
 │   └── test_octave_struct.m                  # Octave structure test
 │
 ├── 📂 data/                 # Dataset and reference files
-│   ├── hrc_datasets.csv                     # 9 HRC-relevant datasets (rows 1-9); rows 10-29 are unrelated Zenodo scrapes excluded from analysis
-│   ├── hrc_papers.csv                      # 39 research papers
+│   ├── hrc_datasets.csv                     # 9 HRC-relevant datasets (records 1-9); records 10-20 are unrelated Zenodo scrapes excluded from analysis
+│   ├── hrc_papers.csv                      # 38 paper records from arXiv keyword queries (includes off-topic hits)
 │   └── iso_safety_limits.csv                # ISO/TS 15066 safety standards
 │
 ├── 📂 docs/                 # Documentation and guides
@@ -74,7 +77,7 @@ IEOM/
 │
 ├── 📄 README.md              # Main project documentation
 ├── 📄 PROGRAM_OVERVIEW.md   # Detailed program overview
-└── 📄 RESEARCH_PAPER.md     # Research paper draft (empty)
+└── 📄 RESEARCH_PAPER.md     # Early paper draft (results tables unfilled)
 ```
 
 ---
@@ -128,9 +131,9 @@ python scripts/phase2_cli.py train-classical --input /tmp/ieom_synth.jsonl --out
 
 ### **Dataset Integration**
 - **9 HRC-relevant datasets** used for scenario motivation and ISO parameter grounding
-- **39 research papers** supporting analysis
+- **38 paper records** from arXiv keyword queries; some are off-topic hits (for example ISO astronomy papers matched by an ISO 15066 query)
 - **ISO safety standards** integration
-- **Note**: `hrc_datasets.csv` contains additional non-HRC Zenodo records (rows 10–29) from a broad scraper run; these are excluded from all analysis
+- **Note**: `hrc_datasets.csv` contains additional non-HRC Zenodo records (records 10–20) from a broad scraper run; these are excluded from all analysis
 
 ### **Simulation Capabilities**
 - **Three speed scenarios**: Slow, Moderate, Aggressive
@@ -168,7 +171,7 @@ See artifacts/paper_results/ for A/B benchmark statistics.
 ```
 Primary metric : overlap_risk_event_count (Policy A vs. Policy B)
 Secondary metric: task_completion_time_sec
-N seeds: 500 | Scenarios: 8 | Statistical test: Wilcoxon signed-rank
+N seeds: 50 (NUM_SEEDS) | Environments: 5 | Statistical test: Wilcoxon signed-rank
 See artifacts/paper_results/tables/main_ab_benchmark_summary.csv
 ```
 
@@ -193,7 +196,7 @@ See artifacts/paper_results/tables/main_ab_benchmark_summary.csv
 
 ### **1. Dataset Validation**
 ```matlab
-% Simulation automatically validates against all 14 datasets
+% Simulation checks each dataset row marked reachable in hrc_datasets.csv
 % Results shown in console output and Figure 7
 ```
 
@@ -238,6 +241,7 @@ run('run_paper_benchmark.m')
 ### **Technical References**
 - **`docs/DATASET_INTEGRATION_GUIDE.md`** - Implementation details
 - **`docs/INTEGRATION_SUMMARY.txt`** - Feature overview
+- **`docs/MATLAB_TEAM_HANDOFF.md`** - Handoff notes for the MATLAB team
 - **`docs/[other files]**** - Specialized documentation
 
 ---
@@ -258,54 +262,11 @@ run('run_paper_benchmark.m')
 
 ---
 
-## 🔄 **MATLAB Team Handoff**
-
-### **Handoff Notice**
-The repository now contains both the MATLAB-first simulation workflow and the restored Python hesitation stack. The next phase belongs to the MATLAB team: verify the simulation path end-to-end in MATLAB, confirm the Python bridge still resolves correctly, and move the project from "runs" to "trusted and reproducible."
-
-### **What the MATLAB Team Should Own**
-- Confirm that `simulations/baseline_handoff_simulation.m` is the canonical entry point for MATLAB runs.
-- Verify that supporting scripts in `simulations/` still pass when executed from a clean MATLAB session.
-- Confirm that the restored Python package installs from repo root and that MATLAB bridge scripts can resolve `hesitation.inference.cli`.
-- Validate that the integrated simulation behavior matches the documented three-scenario expectations.
-- Tighten any parts of the MATLAB code that still depend on manual inspection instead of scripted checks.
-- Keep generated figures, console outputs, and any benchmark results reproducible.
-
-### **Recommended Progression**
-1. Run the baseline flow first: `baseline_handoff_simulation.m`, then `matlab_verify_three_scenarios.m`.
-2. Run smoke checks next: `matlab_cli_debug_smoke.m`, `matlab_ab_policy_smoke.m`, and `matlab_python_bridge_smoke.m`.
-3. Run expected-result checks: `matlab_baseline_expected_check.m` and `matlab_ab_expected_check.m`.
-4. Run integration coverage last: `test_matlab_integration.m` and `test_matlab_cli_integration.m`.
-5. Run Python packaging verification from repo root: `pip install -e ".[dev,serve]"` and `python -c "import hesitation"`.
-6. Record any failures with exact MATLAB version, command used, stack trace, and whether the issue is logic, environment, data-path, or Python-environment related.
-
-### **Definition of Done for This Handoff**
-- Baseline simulation runs in MATLAB without manual patching.
-- Three-scenario verification produces expected outputs.
-- A/B policy benchmark executes cleanly and results are interpretable.
-- MATLAB bridge smoke scripts can call into the restored Python hesitation entrypoints.
-- MATLAB integration tests pass or have clearly documented blockers.
-- Any required code changes are pushed back into the canonical scripts, not left as local workspace edits.
-
-### **Priority Fix Order**
-- First: execution failures, path issues, missing-file problems, MATLAB-version incompatibilities.
-- Second: incorrect scenario outputs or broken verification assumptions.
-- Third: benchmark quality, parameter tuning, and adaptive-control improvements.
-- Last: extensions such as 3D scenarios, hardware integration, or ML-based policy work.
-
-### **Notes for the Next Team**
-- Treat `data/` as the source of truth for CSV inputs.
-- Treat `docs/` as the reference for expected behavior, but prefer executable MATLAB checks over prose where they disagree.
-- Do not start with new features until the current MATLAB verification scripts are stable and repeatable.
-- If simulation outputs change intentionally, update both the validation logic and the documentation in the same pass.
-
----
-
 ## 📞 **Support & Maintenance**
 
 ### **File Locations**
 ```
-Project Root: /Users/adijain/ENGINEERING/IEOM/
+Project Root: repository root
 Main Simulation: simulations/baseline_handoff_simulation.m
 Enhanced Simulation: simulations/baseline_handoff_simulation_integrated.m
 Data Files: data/ (hrc_datasets.csv, hrc_papers.csv, iso_safety_limits.csv)
@@ -326,20 +287,8 @@ Archive: archive/ (historical files and databases)
 
 ## ✅ **Project Status**
 
-**Simulation Engine**: ✅ Runs cleanly across 500 seeds  
+**Simulation Engine**: `run_paper_benchmark.m` runs 50 seeds × 5 environments by default  
 **A/B Benchmark**: ✅ `run_paper_benchmark.m` produces stable CSV + PNG artifacts  
 **Sensitivity Analysis**: ✅ `run_sensitivity_analysis.m` sweeps 27 parameter combos  
 **Research Paper**: 🔄 Draft in `RESEARCH_PAPER.md`  
 **Scope Caveat**: 2-D kinematic model; hesitation classifier trained on synthetic data only — see paper Limitations section  
-
----
-
-**The enhanced HRC simulation framework is ready for:**
-- 🔬 **Research validation** against real datasets
-- 🏭 **Industrial deployment** with safety compliance  
-- 📚 **Academic research** with reproducible methodology
-- 🤖 **Robot development** with data-driven parameter tuning
-
----
-
-*Generated by Cascade AI Assistant | Last Updated: 2026-04-27*

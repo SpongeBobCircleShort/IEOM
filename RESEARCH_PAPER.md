@@ -1,9 +1,6 @@
 # Hesitation-Aware Adaptive Speed Control for Human-Robot Handoff: A Monte Carlo Simulation Study
 
-**Authors:** [Author Names]  
-**Affiliation:** [Institution]  
-**Conference:** IEOM [Year]  
-**Repository:** `c:/Users/avt6053/IEOM`
+> **Working draft.** This is an early draft kept for reference; its results tables are unfilled. The final paper, with author list and results, was accepted for oral presentation at IEOM Ankara 2026 (Paper ID 222) as "A Simulation Study of Hesitation-Aware Robotic Handoff: Safety-Efficiency Tradeoffs Across Collaborative Environment Classes".
 
 ---
 
